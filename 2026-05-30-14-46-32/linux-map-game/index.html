@@ -1,0 +1,2329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux 地图探险游戏</title>
+<style>
+  /* ======= 全局重置 & 字体 ======= */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+  :root {
+    --bg-dark: #0a0e1a;
+    --bg-panel: #0d1530;
+    --bg-card: #111827;
+    --neon-green: #00ff88;
+    --neon-blue: #00c8ff;
+    --neon-purple: #b44fff;
+    --neon-gold: #ffd700;
+    --neon-red: #ff4466;
+    --neon-cyan: #00ffff;
+    --text-main: #e0e8ff;
+    --text-dim: #7a8baa;
+    --border-glow: rgba(0, 200, 255, 0.3);
+    --shadow-neon: 0 0 20px rgba(0, 200, 255, 0.4);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg-dark);
+    color: var(--text-main);
+    font-family: 'Noto Sans SC', 'Share Tech Mono', monospace;
+    overflow-x: hidden;
+  }
+
+  /* ======= 星空背景 ======= */
+  #stars-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    animation: twinkle 3s infinite alternate;
+  }
+  @keyframes twinkle {
+    0%   { opacity: 0.2; transform: scale(0.8); }
+    100% { opacity: 1;   transform: scale(1.2); }
+  }
+
+  /* ======= 主容器 ======= */
+  #app {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+  }
+
+  /* ======= 标题屏 ======= */
+  #screen-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px 20px;
+    text-align: center;
+  }
+
+  .game-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(2rem, 6vw, 4rem);
+    font-weight: 900;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--neon-green) 0%, var(--neon-blue) 50%, var(--neon-purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.5));
+    margin-bottom: 8px;
+  }
+
+  .game-subtitle {
+    font-size: 1.1rem;
+    color: var(--neon-cyan);
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    opacity: 0.85;
+  }
+
+  .terminal-tagline {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--neon-green);
+    font-size: 0.9rem;
+    margin-bottom: 50px;
+    opacity: 0.7;
+  }
+  .terminal-tagline::before { content: '$ '; color: var(--neon-gold); }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 36px;
+  }
+  .input-label {
+    color: var(--neon-blue);
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+  }
+  .styled-input {
+    background: rgba(0, 200, 255, 0.07);
+    border: 1.5px solid var(--neon-blue);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1.1rem;
+    padding: 12px 24px;
+    outline: none;
+    text-align: center;
+    width: 280px;
+    transition: box-shadow 0.3s;
+    font-family: 'Noto Sans SC', sans-serif;
+  }
+  .styled-input:focus {
+    box-shadow: 0 0 16px rgba(0, 200, 255, 0.5);
+  }
+
+  .btn-start {
+    background: linear-gradient(135deg, #00c8ff, #00ff88);
+    border: none;
+    border-radius: 10px;
+    color: #0a0e1a;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 16px 52px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 24px rgba(0, 200, 255, 0.4);
+  }
+  .btn-start:hover {
+    transform: scale(1.06);
+    box-shadow: 0 0 40px rgba(0, 200, 255, 0.7);
+  }
+
+  .info-cards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    max-width: 900px;
+    margin-top: 40px;
+  }
+  .info-card {
+    background: rgba(13, 21, 48, 0.8);
+    border: 1px solid var(--border-glow);
+    border-radius: 12px;
+    padding: 18px 24px;
+    width: 160px;
+    text-align: center;
+    backdrop-filter: blur(6px);
+    transition: transform 0.2s;
+  }
+  .info-card:hover { transform: translateY(-4px); }
+  .info-card .ic-icon { font-size: 2.2rem; margin-bottom: 8px; }
+  .info-card .ic-title { font-size: 0.8rem; color: var(--neon-blue); letter-spacing: 1px; margin-bottom: 4px; font-family: 'Orbitron', sans-serif; }
+  .info-card .ic-desc { font-size: 0.78rem; color: var(--text-dim); line-height: 1.5; }
+
+  /* ======= 地图屏 ======= */
+  #screen-map {
+    display: none;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
+    padding: 14px 24px;
+    background: rgba(13, 21, 48, 0.9);
+    border: 1px solid var(--border-glow);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+  }
+  .top-bar-left { display: flex; align-items: center; gap: 14px; }
+  .player-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--neon-green), var(--neon-blue));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: bold; color: #0a0e1a;
+  }
+  .player-info-text .player-name {
+    font-size: 1rem; font-weight: 700; color: var(--neon-cyan);
+  }
+  .player-info-text .player-rank {
+    font-size: 0.75rem; color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .score-display {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    color: var(--neon-gold);
+    text-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+  }
+  .score-display span { font-size: 0.75rem; color: var(--text-dim); margin-right: 4px; }
+
+  .progress-section { text-align: center; }
+  .progress-label { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 5px; font-family: 'Share Tech Mono', monospace; }
+  .progress-bar-wrap { width: 180px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-blue)); border-radius: 5px; transition: width 0.5s; }
+
+  .map-header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  .map-title-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.2rem, 3vw, 1.8rem);
+    color: var(--neon-cyan);
+    letter-spacing: 3px;
+    text-shadow: 0 0 16px rgba(0, 255, 255, 0.4);
+  }
+  .map-subtitle-text {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .map-container {
+    position: relative;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .map-path-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .zones-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+    padding: 20px 0;
+  }
+
+  @media (max-width: 700px) {
+    .zones-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 420px) {
+    .zones-grid { grid-template-columns: 1fr; }
+  }
+
+  .zone-card {
+    position: relative;
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 22px 16px 18px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.25s, box-shadow 0.25s;
+    border: 2px solid transparent;
+    overflow: hidden;
+  }
+  .zone-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent);
+    pointer-events: none;
+  }
+
+  .zone-card.locked {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.6);
+  }
+  .zone-card.available {
+    border-color: var(--neon-blue);
+    box-shadow: var(--shadow-neon);
+    animation: pulse-glow 2.5s ease-in-out infinite;
+  }
+  .zone-card.completed {
+    border-color: var(--neon-green);
+    box-shadow: 0 0 16px rgba(0, 255, 136, 0.3);
+  }
+  .zone-card.completed .zone-badge {
+    background: var(--neon-green);
+    color: #0a0e1a;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 12px rgba(0, 200, 255, 0.3); }
+    50% { box-shadow: 0 0 28px rgba(0, 200, 255, 0.6); }
+  }
+
+  .zone-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 200, 255, 0.15);
+    color: var(--neon-blue);
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+  }
+  .zone-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--text-main);
+  }
+  .zone-desc {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    margin-bottom: 8px;
+  }
+  .zone-qcount {
+    font-size: 0.7rem;
+    color: var(--neon-gold);
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* Boss关卡卡片特效 */
+  .zone-card.boss-zone {
+    border: 2px solid #ff6b35;
+    background: linear-gradient(135deg, var(--bg-card), rgba(255, 107, 53, 0.08));
+  }
+  .zone-card.boss-zone.available {
+    border-color: #ff6b35;
+    box-shadow: 0 0 20px rgba(255, 107, 53, 0.4);
+    animation: boss-pulse 2s ease-in-out infinite;
+  }
+  .zone-card.boss-zone.completed {
+    border-color: #ff6b35;
+    box-shadow: 0 0 16px rgba(255, 107, 53, 0.4);
+  }
+  .zone-card.boss-zone.completed .zone-badge {
+    background: #ff6b35;
+    color: #0a0e1a;
+  }
+  @keyframes boss-pulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(255, 107, 53, 0.3); }
+    50% { box-shadow: 0 0 32px rgba(255, 107, 53, 0.7); }
+  }
+  .zone-boss-badge {
+    position: absolute;
+    top: 8px; left: 10px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 900;
+    color: #ff6b35;
+    letter-spacing: 2px;
+  }
+  .zone-boss-hint {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+    font-style: italic;
+  }
+
+  /* Boss场景描述卡 */
+  .boss-scenario {
+    text-align: center;
+    padding: 16px 8px;
+    animation: fadeIn 0.5s ease;
+  }
+  .boss-scenario-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+  }
+  .boss-scenario-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    color: #ff6b35;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+  .boss-scenario-text {
+    font-size: 0.88rem;
+    color: var(--text-main);
+    line-height: 1.7;
+    text-align: left;
+    padding: 16px 20px;
+    background: rgba(255, 107, 53, 0.06);
+    border-left: 3px solid #ff6b35;
+    border-radius: 0 10px 10px 0;
+    margin-bottom: 14px;
+  }
+  .boss-scenario-hint {
+    font-size: 0.8rem;
+    color: var(--neon-gold);
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .zone-lock-icon {
+    position: absolute;
+    top: 10px; right: 12px;
+    font-size: 1rem;
+    opacity: 0.5;
+  }
+  .zone-check-icon {
+    position: absolute;
+    top: 10px; right: 12px;
+    font-size: 1.2rem;
+    color: var(--neon-green);
+  }
+
+  /* ======= 答题屏 ======= */
+  #screen-quiz {
+    display: none;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  .quiz-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 12px 20px;
+    background: rgba(13, 21, 48, 0.9);
+    border: 1px solid var(--border-glow);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+  }
+  .quiz-zone-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
+    color: var(--neon-cyan);
+    letter-spacing: 1px;
+  }
+  .quiz-progress-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--neon-gold);
+  }
+  .quiz-score-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    color: var(--neon-green);
+  }
+
+  /* 答题进度条 */
+  .quiz-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px;
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+  .quiz-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon-green), var(--neon-cyan));
+    border-radius: 4px;
+    transition: width 0.4s;
+  }
+
+  /* 题目卡片 */
+  .question-card {
+    max-width: 720px;
+    margin: 0 auto;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    border-radius: 16px;
+    padding: 32px 28px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+  }
+
+  .q-number {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--neon-blue);
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+  }
+  .q-type-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-family: 'Share Tech Mono', monospace;
+    margin-left: 8px;
+  }
+  .q-type-badge.single { background: rgba(0, 200, 255, 0.15); color: var(--neon-blue); }
+  .q-type-badge.multi  { background: rgba(180, 79, 255, 0.15); color: var(--neon-purple); }
+  .q-type-badge.fill   { background: rgba(0, 255, 136, 0.15); color: var(--neon-green); }
+
+  .q-text {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    margin-bottom: 24px;
+    color: var(--text-main);
+  }
+  .q-text code {
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid rgba(0, 255, 136, 0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.95rem;
+    color: var(--neon-green);
+  }
+
+  /* 选项 */
+  .options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .option-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 18px;
+    border: 1.5px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(255,255,255,0.02);
+  }
+  .option-item:hover {
+    border-color: var(--neon-blue);
+    background: rgba(0, 200, 255, 0.06);
+  }
+  .option-item.selected {
+    border-color: var(--neon-cyan);
+    background: rgba(0, 255, 255, 0.08);
+  }
+  .option-item.correct {
+    border-color: var(--neon-green);
+    background: rgba(0, 255, 136, 0.12);
+  }
+  .option-item.wrong {
+    border-color: var(--neon-red);
+    background: rgba(255, 68, 102, 0.12);
+  }
+  .option-item.disabled {
+    pointer-events: none;
+  }
+  .option-letter {
+    min-width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(0, 200, 255, 0.12);
+    color: var(--neon-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    font-family: 'Orbitron', sans-serif;
+  }
+  .option-item.selected .option-letter {
+    background: var(--neon-cyan);
+    color: #0a0e1a;
+  }
+  .option-item.correct .option-letter {
+    background: var(--neon-green);
+    color: #0a0e1a;
+  }
+  .option-item.wrong .option-letter {
+    background: var(--neon-red);
+    color: #fff;
+  }
+  .option-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    padding-top: 3px;
+  }
+  .option-text code {
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid rgba(0, 255, 136, 0.2);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.88rem;
+    color: var(--neon-green);
+  }
+
+  /* 多选提示 */
+  .multi-hint {
+    font-size: 0.78rem;
+    color: var(--neon-purple);
+    margin-bottom: 14px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* 填空题输入 */
+  .fill-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .fill-prompt {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--neon-green);
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+  .fill-input {
+    flex: 1;
+    background: rgba(0, 200, 255, 0.06);
+    border: 1.5px solid var(--neon-blue);
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1rem;
+    padding: 12px 16px;
+    outline: none;
+    transition: box-shadow 0.3s;
+  }
+  .fill-input:focus {
+    box-shadow: 0 0 16px rgba(0, 200, 255, 0.5);
+  }
+  .fill-input.correct {
+    border-color: var(--neon-green);
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
+  }
+  .fill-input.wrong {
+    border-color: var(--neon-red);
+    box-shadow: 0 0 12px rgba(255, 68, 102, 0.4);
+  }
+  .fill-answer-hint {
+    font-size: 0.82rem;
+    color: var(--neon-green);
+    font-family: 'Share Tech Mono', monospace;
+    margin-top: 4px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .fill-answer-hint.visible { opacity: 1; }
+  .fill-hint-text {
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    margin-top: 6px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* 按钮 */
+  .btn-submit {
+    display: block;
+    width: 100%;
+    max-width: 720px;
+    margin: 24px auto 0;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-submit.active {
+    background: linear-gradient(135deg, #00c8ff, #00ff88);
+    color: #0a0e1a;
+    box-shadow: 0 0 20px rgba(0, 200, 255, 0.4);
+  }
+  .btn-submit.active:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 32px rgba(0, 200, 255, 0.6);
+  }
+  .btn-submit.disabled {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
+  .btn-back-map {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 8px 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Noto Sans SC', sans-serif;
+  }
+  .btn-back-map:hover {
+    border-color: var(--neon-blue);
+    color: var(--neon-blue);
+  }
+
+  /* ======= 关卡结果屏 ======= */
+  #screen-result {
+    display: none;
+    min-height: 100vh;
+    padding: 40px 20px;
+    text-align: center;
+  }
+  .result-card {
+    max-width: 560px;
+    margin: 0 auto;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    border-radius: 20px;
+    padding: 48px 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 5px;
+    background: linear-gradient(90deg, var(--neon-green), var(--neon-cyan), var(--neon-purple));
+  }
+  .result-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+  }
+  .result-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.6rem;
+    color: var(--neon-cyan);
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+  }
+  .result-score {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.4rem;
+    color: var(--neon-gold);
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    margin-bottom: 8px;
+  }
+  .result-detail {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin-bottom: 28px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .result-buttons {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn-result {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-result.primary {
+    background: linear-gradient(135deg, #00c8ff, #00ff88);
+    color: #0a0e1a;
+    box-shadow: 0 0 16px rgba(0, 200, 255, 0.3);
+  }
+  .btn-result.secondary {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border-glow);
+    color: var(--neon-blue);
+  }
+  .btn-result:hover { transform: scale(1.04); }
+
+  /* ======= 最终屏 ======= */
+  #screen-final {
+    display: none;
+    min-height: 100vh;
+    padding: 40px 20px;
+    text-align: center;
+  }
+  .final-card {
+    max-width: 620px;
+    margin: 0 auto;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    border-radius: 20px;
+    padding: 48px 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .final-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 5px;
+    background: linear-gradient(90deg, var(--neon-gold), var(--neon-green), var(--neon-cyan));
+  }
+  .final-rank {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 5rem;
+    font-weight: 900;
+    margin-bottom: 12px;
+  }
+  .final-rank.s-rank { color: var(--neon-gold); text-shadow: 0 0 40px rgba(255,215,0,0.6); }
+  .final-rank.a-rank { color: var(--neon-green); text-shadow: 0 0 30px rgba(0,255,136,0.5); }
+  .final-rank.b-rank { color: var(--neon-blue); text-shadow: 0 0 30px rgba(0,200,255,0.5); }
+  .final-rank.c-rank { color: var(--neon-purple); text-shadow: 0 0 30px rgba(180,79,255,0.5); }
+
+  .final-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    color: var(--neon-cyan);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .final-score {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    color: var(--neon-gold);
+    text-shadow: 0 0 16px rgba(255,215,0,0.4);
+    margin-bottom: 24px;
+  }
+
+  .final-zones-summary {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .final-zone-chip {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .final-zone-chip .chip-name { color: var(--text-main); margin-bottom: 4px; }
+  .final-zone-chip .chip-score { color: var(--neon-gold); font-weight: 700; }
+
+  /* ======= 粒子爆炸效果 ======= */
+  .particle {
+    position: fixed;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1000;
+    animation: particle-fly 0.7s ease-out forwards;
+  }
+  @keyframes particle-fly {
+    0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0); }
+  }
+
+  /* ======= 得分弹窗 ======= */
+  .score-popup {
+    position: fixed;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 900;
+    pointer-events: none;
+    z-index: 1001;
+    animation: score-fly 1s ease-out forwards;
+  }
+  .score-popup.positive { color: var(--neon-green); text-shadow: 0 0 12px rgba(0,255,136,0.6); }
+  .score-popup.negative { color: var(--neon-red); text-shadow: 0 0 12px rgba(255,68,102,0.6); }
+  @keyframes score-fly {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-60px) scale(1.3); }
+  }
+
+  /* ======= 统计按钮 ======= */
+  .btn-stats {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border-glow);
+    border-radius: 8px;
+    color: var(--neon-cyan);
+    font-size: 0.85rem;
+    padding: 8px 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Noto Sans SC', sans-serif;
+    white-space: nowrap;
+  }
+  .btn-stats:hover {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
+  }
+
+  /* ======= 统计屏幕 ======= */
+  #screen-stats {
+    display: none;
+    min-height: 100vh;
+    padding: 32px 16px;
+  }
+  .stats-card {
+    max-width: 780px;
+    margin: 0 auto;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    border-radius: 20px;
+    padding: 36px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 5px;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green), var(--neon-gold));
+  }
+  .stats-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .stats-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    color: var(--neon-cyan);
+    letter-spacing: 2px;
+  }
+  .stats-overall {
+    text-align: center;
+    margin-bottom: 32px;
+    padding: 24px;
+    background: rgba(0, 255, 255, 0.04);
+    border-radius: 16px;
+    border: 1px solid rgba(0, 200, 255, 0.15);
+  }
+  .stats-overall-percent {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--neon-green), var(--neon-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.2;
+  }
+  .stats-overall-label {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .stats-overall-detail {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .stats-overall-item {
+    text-align: center;
+  }
+  .stats-overall-item .num {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+  .stats-overall-item .num.green { color: var(--neon-green); }
+  .stats-overall-item .num.red { color: var(--neon-red); }
+  .stats-overall-item .num.gold { color: var(--neon-gold); }
+  .stats-overall-item .lbl {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .stats-section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
+    color: var(--neon-blue);
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .stats-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(0, 200, 255, 0.2);
+  }
+
+  /* 各关卡正确率条 */
+  .stats-zone-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .stats-zone-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .stats-zone-bar-name {
+    font-size: 0.82rem;
+    color: var(--text-main);
+    min-width: 100px;
+    font-family: 'Share Tech Mono', monospace;
+    white-space: nowrap;
+  }
+  .stats-zone-bar-track {
+    flex: 1;
+    height: 22px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 11px;
+    overflow: hidden;
+    position: relative;
+  }
+  .stats-zone-bar-fill {
+    height: 100%;
+    border-radius: 11px;
+    transition: width 0.8s ease;
+    position: relative;
+  }
+  .stats-zone-bar-fill::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 30px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2));
+    border-radius: 0 11px 11px 0;
+  }
+  .stats-zone-bar-pct {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    color: var(--neon-gold);
+    min-width: 48px;
+    text-align: right;
+  }
+
+  /* 题型统计 */
+  .stats-type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 500px) {
+    .stats-type-grid { grid-template-columns: 1fr; }
+  }
+  .stats-type-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 18px 16px;
+    text-align: center;
+  }
+  .stats-type-icon {
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+  }
+  .stats-type-name {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .stats-type-pct {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .stats-type-detail {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* 答题详情 */
+  .stats-detail-list {
+    max-height: 420px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .stats-detail-list::-webkit-scrollbar { width: 6px; }
+  .stats-detail-list::-webkit-scrollbar-track { background: transparent; }
+  .stats-detail-list::-webkit-scrollbar-thumb { background: rgba(0,200,255,0.3); border-radius: 3px; }
+
+  .stats-detail-zone-header {
+    position: sticky;
+    top: 0;
+    background: rgba(13, 21, 48, 0.98);
+    padding: 10px 16px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.82rem;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    z-index: 1;
+  }
+  .stats-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.8rem;
+    transition: background 0.15s;
+  }
+  .stats-detail-item:hover { background: rgba(255,255,255,0.03); }
+  .stats-detail-item:last-child { border-bottom: none; }
+  .stats-detail-status {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+  .stats-detail-status.correct {
+    background: rgba(0, 255, 136, 0.15);
+    color: var(--neon-green);
+    border: 1px solid rgba(0, 255, 136, 0.3);
+  }
+  .stats-detail-status.wrong {
+    background: rgba(255, 68, 102, 0.15);
+    color: var(--neon-red);
+    border: 1px solid rgba(255, 68, 102, 0.3);
+  }
+  .stats-detail-q {
+    flex: 1;
+    color: var(--text-main);
+    line-height: 1.4;
+    /* 截断过长题目 */
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .stats-detail-answers {
+    text-align: right;
+    flex-shrink: 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+  }
+  .stats-detail-answers .your-ans {
+    color: var(--neon-blue);
+  }
+  .stats-detail-answers .right-ans {
+    color: var(--neon-green);
+  }
+  .stats-detail-answers .your-ans.wrong-ans {
+    color: var(--neon-red);
+  }
+
+  .stats-actions {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  /* ======= Toast ======= */
+  .toast {
+    position: fixed;
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    border-radius: 10px;
+    padding: 14px 28px;
+    font-size: 0.9rem;
+    color: var(--neon-cyan);
+    z-index: 2000;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div id="stars-bg"></div>
+<div id="app">
+  <!-- 标题屏 -->
+  <div id="screen-title">
+    <div class="game-logo">LINUX MAP</div>
+    <div class="game-subtitle">Linux 地图探险游戏</div>
+    <div class="terminal-tagline">begin your journey into the linux world</div>
+    <div class="input-group">
+      <label class="input-label">输入你的代号</label>
+      <input class="styled-input" id="player-name" placeholder="探险者" maxlength="12" autocomplete="off">
+    </div>
+    <button class="btn-start" onclick="startGame()">START</button>
+    <div class="info-cards">
+      <div class="info-card">
+        <div class="ic-icon">&#x2699;</div>
+        <div class="ic-title">5 大关卡</div>
+        <div class="ic-desc">基础命令、用户管理、网络配置、文件权限、软件管理</div>
+      </div>
+      <div class="info-card">
+        <div class="ic-icon">&#x1f4dd;</div>
+        <div class="ic-title">100 道题目</div>
+        <div class="ic-desc">选择题 + 填空题，模拟真实终端操作</div>
+      </div>
+      <div class="info-card">
+        <div class="ic-icon">&#x1f3c6;</div>
+        <div class="ic-title">评级系统</div>
+        <div class="ic-desc">S / A / B / C 四档评级，挑战满分</div>
+      </div>
+      <div class="info-card">
+        <div class="ic-icon">&#x1f525;</div>
+        <div class="ic-title">赛博风格</div>
+        <div class="ic-desc">沉浸式终端界面，炫酷视觉效果</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 地图屏 -->
+  <div id="screen-map">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div class="player-avatar" id="avatar-letter">?</div>
+        <div class="player-info-text">
+          <div class="player-name" id="map-player-name">探险者</div>
+          <div class="player-rank" id="map-player-rank">RANK: --</div>
+        </div>
+      </div>
+      <div class="score-display">
+        <span>SCORE</span><span id="map-total-score">0</span>
+      </div>
+      <div class="progress-section">
+        <div class="progress-label">PROGRESS</div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="map-progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <button class="btn-stats" onclick="showStatsScreen()">&#x1f4ca; 统计</button>
+    </div>
+    <div class="map-header">
+      <div class="map-title-text">LINUX EXPLORATION MAP</div>
+      <div class="map-subtitle-text">选择一个区域开始你的挑战 &gt;_</div>
+    </div>
+    <div class="map-container">
+      <svg class="map-path-svg" id="map-svg"></svg>
+      <div class="zones-grid" id="zones-grid"></div>
+    </div>
+  </div>
+
+  <!-- 答题屏 -->
+  <div id="screen-quiz">
+    <div class="quiz-top-bar">
+      <div class="quiz-zone-name" id="quiz-zone-name">ZONE 1</div>
+      <div class="quiz-progress-text" id="quiz-progress-text">1 / 20</div>
+      <div class="quiz-score-text" id="quiz-score-text">0</div>
+    </div>
+    <div class="quiz-progress-bar">
+      <div class="quiz-progress-fill" id="quiz-progress-fill" style="width:0%"></div>
+    </div>
+    <div class="question-card" id="question-card"></div>
+    <button class="btn-submit disabled" id="btn-submit">SUBMIT</button>
+    <div style="text-align:center">
+      <button class="btn-back-map" onclick="backToMap()">返回地图</button>
+    </div>
+  </div>
+
+  <!-- 关卡结果屏 -->
+  <div id="screen-result">
+    <div class="result-card" id="result-card"></div>
+  </div>
+
+  <!-- 最终结果屏 -->
+  <div id="screen-final">
+    <div class="final-card" id="final-card"></div>
+  </div>
+
+  <!-- 统计正确率屏 -->
+  <div id="screen-stats">
+    <div class="stats-card" id="stats-card"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================================================================
+// ================ 题库数据（每关20题，基于PPT教学内容）================
+// ===================================================================
+
+const ZONES = [
+  {
+    id: 1,
+    name: '基础命令区',
+    desc: 'Shell概念 / 目录操作 / 文件管理',
+    color: '#00ff88',
+    questions: [
+      // --- 概念选择题 ---
+      { type:'single', question:'Linux中，用户与内核之间的接口叫做什么？', options:['Shell','BIOS','GUI','API'], answer:0, score:5 },
+      { type:'single', question:'以下哪个不是Linux中常见的Shell？', options:['bash','sh','zsh','cmd'], answer:3, score:5 },
+      { type:'single', question:'Linux命令的一般格式为：命令名 [选项] [参数]。选项通常以什么符号开头？', options:['/','-','@','#'], answer:1, score:5 },
+      { type:'single', question:'在终端中，~ 符号代表什么含义？', options:['根目录','当前用户的主目录','上一级目录','临时目录'], answer:1, score:5 },
+      { type:'single', question:'在Linux中，使用什么命令可以查看当前所在的绝对路径？', options:['cd','dir','pwd','path'], answer:2, score:5 },
+      { type:'single', question:'以下哪个命令可以查看当前目录下的文件列表（含隐藏文件）？', options:['ls -l','ls -a','ls -r','ls -d'], answer:1, score:5 },
+      { type:'single', question:'硬链接和软链接的区别，以下说法正确的是？', options:['硬链接删除源文件后仍可访问','软链接删除源文件后仍可访问','两者完全相同','硬链接可以跨文件系统'], answer:0, score:5 },
+      { type:'single', question:'重定向符号 > 的作用是什么？', options:['将命令输出追加到文件','将命令输出覆盖写入文件','读取文件内容','连接两个命令'], answer:1, score:5 },
+      { type:'single', question:'管道符号 | 的作用是什么？', options:['同时执行两个命令','将前一个命令的输出作为后一个命令的输入','将错误信息输出到文件','连接两个文件'], answer:1, score:5 },
+      { type:'single', question:'vim编辑器中，从命令模式切换到插入模式应按哪个键？', options:['Esc','i',':','dd'], answer:1, score:5 },
+      // --- 命令选择题 ---
+      { type:'single', question:'要创建一个名为 mydir 的目录，应使用什么命令？', options:['file mydir','mkdir mydir','newdir mydir','touch mydir'], answer:1, score:5 },
+      { type:'single', question:'要递归删除目录 mydir 及其内容，应使用什么命令？', options:['rm -r mydir','del mydir','rmdir mydir','erase mydir'], answer:0, score:5 },
+      // --- 填空题（实际敲代码）---
+      { type:'fill', question:'切换到 /home/user 目录，请输入命令（完整命令）', answer:'cd /home/user', hint:'cd <路径>', score:5 },
+      { type:'fill', question:'创建空文件 readme.txt，请输入命令', answer:'touch readme.txt', hint:'touch <文件名>', score:5 },
+      { type:'fill', question:'将 file1.txt 复制为 file2.txt，请输入命令', answer:'cp file1.txt file2.txt', hint:'cp <源> <目标>', score:5 },
+      { type:'fill', question:'将 old.txt 重命名为 new.txt，请输入命令', answer:'mv old.txt new.txt', hint:'mv <旧名> <新名>', score:5 },
+      { type:'fill', question:'将目录 mydir 打包为 mydir.tar.gz，请输入命令', answer:'tar -czvf mydir.tar.gz mydir', hint:'tar -czvf <包名> <目录>', score:5 },
+      { type:'fill', question:'查看文件 content.txt 的前10行内容，请输入命令', answer:['head -10 content.txt','head -n 10 content.txt'], hint:'head -n <行数> <文件>', score:5 },
+      { type:'fill', question:'在文件中搜索包含 "error" 的行，请输入命令（使用管道配合）', answer:'grep "error" logfile.txt', hint:'grep "关键词" <文件>', score:5 },
+      { type:'fill', question:'在 vim 编辑器中，在命令模式下输入什么可以保存并退出？', answer:[':wq',':x'], hint:':wq 或 :x', score:5 },
+      { type:'fill', question:'将命令 ls 的输出追加到 output.log 文件中，请输入命令', answer:'ls >> output.log', hint:'命令 >> 文件', score:5 },
+    ]
+  },
+  {
+    id: 2,
+    name: '用户管理区',
+    desc: '用户/组管理 / 权限配置 / su&sudo',
+    color: '#00c8ff',
+    questions: [
+      // --- 概念选择题 ---
+      { type:'single', question:'/etc/passwd 文件中每行包含多少个字段（以:分隔）？', options:['5个','6个','7个','8个'], answer:2, score:5 },
+      { type:'single', question:'/etc/passwd 文件中，第二个字段（密码字段）通常显示为什么？', options:['真实密码','空','x','*'], answer:2, score:5 },
+      { type:'single', question:'Linux中真正存储用户密码（加密后）的文件是？', options:['/etc/passwd','/etc/shadow','/etc/group','/etc/secure'], answer:1, score:5 },
+      { type:'single', question:'/etc/group 文件中每行包含几个字段？', options:['3个','4个','5个','6个'], answer:1, score:5 },
+      { type:'single', question:'UID 为 0 的用户通常代表哪个账户？', options:['admin','root','guest','system'], answer:1, score:5 },
+      { type:'single', question:'以下哪个命令用于修改已有用户的信息（如用户名、家目录等）？', options:['useradd','usermod','userdel','userinfo'], answer:1, score:5 },
+      { type:'single', question:'su 命令的作用是什么？', options:['创建新用户','切换用户身份','删除用户','锁定用户'], answer:1, score:5 },
+      { type:'single', question:'使用 sudo 时，系统通过哪个文件来控制用户的权限？', options:['/etc/passwd','/etc/sudoers','/etc/hosts','/etc/securetty'], answer:1, score:5 },
+      { type:'single', question:'编辑 sudoers 配置文件时，推荐使用什么命令？', options:['vi /etc/sudoers','nano /etc/sudoers','visudo','gedit /etc/sudoers'], answer:2, score:5 },
+      { type:'multi', question:'以下哪些是有效的用户ID（UID）范围？（多选）', options:['root的UID为0','普通用户UID从1000开始','系统用户UID范围为1-999','UID可以为负数'], answer:[0,1,2], score:5 },
+      // --- 命令选择题 ---
+      { type:'single', question:'要删除用户 user1 及其家目录，应使用什么命令？', options:['userdel user1','userdel -r user1','userdel --home user1','rmuser user1'], answer:1, score:5 },
+      { type:'single', question:'要查看当前用户的UID和GID信息，应使用什么命令？', options:['whoami','id','uid','who'], answer:1, score:5 },
+      // --- 填空题（实际敲代码）---
+      { type:'fill', question:'创建一个名为 student 的新用户，请输入命令', answer:'useradd student', hint:'useradd <用户名>', score:5 },
+      { type:'fill', question:'为用户 student 设置密码，请输入命令（注意命令格式）', answer:'passwd student', hint:'passwd <用户名>', score:5 },
+      { type:'fill', question:'创建一个名为 devgroup 的用户组，请输入命令', answer:'groupadd devgroup', hint:'groupadd <组名>', score:5 },
+      { type:'fill', question:'将用户 student 加入到 devgroup 组中，请输入命令', answer:'usermod -aG devgroup student', hint:'usermod -aG <组> <用户>', score:5 },
+      { type:'fill', question:'切换到 root 用户身份（需要输入密码），请输入命令', answer:['su - root','su -'], hint:'su - <用户名> 或 su -', score:5 },
+      { type:'fill', question:'以 root 权限执行一条命令（如 apt update），请输入命令', answer:'sudo apt update', hint:'sudo <命令>', score:5 },
+      { type:'fill', question:'删除用户组 oldgroup，请输入命令', answer:'groupdel oldgroup', hint:'groupdel <组名>', score:5 },
+      { type:'fill', question:'查看当前用户所属的所有用户组，请输入命令', answer:'groups', hint:'groups', score:5 },
+      { type:'fill', question:'修改用户 student 的注释信息为 "Student Account"，请输入命令', answer:'usermod -c "Student Account" student', hint:'usermod -c "注释" <用户>', score:5 },
+    ]
+  },
+  {
+    id: 3,
+    name: '网络配置区',
+    desc: '网卡配置 / 网络命令 / 防火墙 / SSH',
+    color: '#b44fff',
+    questions: [
+      // --- 概念选择题 ---
+      { type:'single', question:'在CentOS/RHEL中，网卡配置文件通常存放在哪个目录下？', options:['/etc/network/','/etc/sysconfig/network-scripts/','/etc/netplan/','/etc/interfaces/'], answer:1, score:5 },
+      { type:'single', question:'网卡配置文件中，BOOTPROTO=dhcp 表示什么？', options:['手动配置IP','通过DHCP自动获取IP','禁用网卡','设置为桥接模式'], answer:1, score:5 },
+      { type:'single', question:'以下哪个命令用于测试网络连通性？', options:['netstat','ping','nslookup','ifconfig'], answer:1, score:5 },
+      { type:'single', question:'SSH服务的默认端口号是多少？', options:['21','22','80','443'], answer:1, score:5 },
+      { type:'single', question:'SSH服务的主配置文件是？', options:['/etc/ssh/sshd.conf','/etc/ssh/sshd_config','/etc/ssh_config','/etc/sshd/sshd.conf'], answer:1, score:5 },
+      { type:'single', question:'以下哪个命令用于追踪数据包到达目标主机所经过的路由？', options:['ping','netstat','traceroute','tracepath'], answer:2, score:5 },
+      { type:'single', question:'firewalld中，用于查看当前所有区域的命令是？', options:['firewall-cmd --list-all','firewall-cmd --get-zones','firewall-cmd --get-active-zones','firewall-cmd --zone=public --list-all'], answer:1, score:5 },
+      { type:'single', question:'SSH密钥认证中，公钥应存放在服务器的哪个文件中？', options:['~/.ssh/id_rsa','~/.ssh/id_rsa.pub','~/.ssh/authorized_keys','~/.ssh/known_hosts'], answer:2, score:5 },
+      { type:'single', question:'使用 nmcli 命令查看所有网络连接，应输入什么？', options:['nmcli show','nmcli connection show','nmcli list','nmcli dev show'], answer:1, score:5 },
+      { type:'single', question:'DNS查询命令 nslookup 的作用是什么？', options:['测试网速','查询域名对应的IP地址','查看路由表','检测端口'], answer:1, score:5 },
+      // --- 命令选择题 ---
+      { type:'single', question:'要在防火墙中永久开放80端口（TCP），应使用什么命令？', options:['firewall-cmd --add-port=80/tcp --permanent','firewall-cmd --open-port=80/tcp','firewall-cmd --port=80 --add','firewall-cmd --zone=public --add-port=80/tcp'], answer:0, score:5 },
+      { type:'single', question:'使用SSH远程登录到服务器 192.168.1.100 的用户user，应输入什么命令？', options:['ssh user@192.168.1.100','ssh 192.168.1.100 user','ssh -l user 192.168.1.100','以上A和C都对'], answer:3, score:5 },
+      // --- 填空题（实际敲代码）---
+      { type:'fill', question:'查看当前系统的所有网络接口信息，请输入命令', answer:['ifconfig','ip addr','ip a'], hint:'ifconfig 或 ip addr', score:5 },
+      { type:'fill', question:'测试与 192.168.1.1 的网络连通性（发送4个包），请输入命令', answer:'ping -c 4 192.168.1.1', hint:'ping -c <次数> <IP>', score:5 },
+      { type:'fill', question:'查看本机所有正在监听的TCP端口，请输入命令', answer:['netstat -tlnp','ss -tlnp'], hint:'netstat -tlnp 或 ss -tlnp', score:5 },
+      { type:'fill', question:'使用firewall-cmd在public区域永久开放http服务，请输入命令', answer:'firewall-cmd --zone=public --add-service=http --permanent', hint:'firewall-cmd --zone=<区域> --add-service=<服务> --permanent', score:5 },
+      { type:'fill', question:'生成SSH密钥对（使用rsa算法），请输入命令', answer:'ssh-keygen -t rsa', hint:'ssh-keygen -t <算法>', score:5 },
+      { type:'fill', question:'将公钥复制到远程服务器（user@192.168.1.100），请输入命令', answer:'ssh-copy-id user@192.168.1.100', hint:'ssh-copy-id <用户@主机>', score:5 },
+      { type:'fill', question:'使用nmtui工具进入网络管理界面，请输入命令', answer:'nmtui', hint:'nmtui', score:5 },
+      { type:'fill', question:'使用nmcli重启网络连接名为 "ens33" 的连接，请输入命令', answer:'nmcli connection up ens33', hint:'nmcli connection up <连接名>', score:5 },
+    ]
+  },
+  {
+    id: 4,
+    name: '文件权限区',
+    desc: 'UGO权限 / chmod / chown / ACL / 特殊权限',
+    color: '#ff4466',
+    questions: [
+      // --- 概念选择题 ---
+      { type:'single', question:'Linux文件权限模型UGO中，U代表什么？', options:['User（文件所有者）','Universal','Unique','Ubuntu'], answer:0, score:5 },
+      { type:'single', question:'文件权限 rwxr-xr-- 用数字表示是多少？', options:['755','754','764','644'], answer:1, score:5 },
+      { type:'single', question:'以下哪个权限表示文件拥有者可读、可写、可执行？', options:['rw-','rwx','r-x','r--'], answer:1, score:5 },
+      { type:'single', question:'umask 值为 022 时，新建文件的默认权限是多少？', options:['644','755','622','646'], answer:0, score:5 },
+      { type:'single', question:'SUID（Set User ID）权限的作用是什么？', options:['让文件所有者拥有执行权限','让其他用户以文件所有者身份执行文件','让文件变为不可删除','让组用户拥有执行权限'], answer:1, score:5 },
+      { type:'single', question:'粘滞位（Sticky Bit）通常应用在哪个目录上？', options:['/home','/tmp','/var','/etc'], answer:1, score:5 },
+      { type:'single', question:'chmod 命令的符号法中，"a+x" 表示什么？', options:['给所有用户添加执行权限','给所有用户删除执行权限','只给所有者添加执行权限','给admin用户添加执行权限'], answer:0, score:5 },
+      { type:'single', question:'chattr +i 命令的作用是什么？', options:['隐藏文件','设置文件为不可变（不能修改/删除）','将文件设为可执行','设置文件为只读'], answer:1, score:5 },
+      { type:'single', question:'ACL（访问控制列表）相比传统UGO权限有什么优势？', options:['只能设置读权限','可以为单个用户设置独立的权限','不支持目录','只能root使用'], answer:1, score:5 },
+      { type:'multi', question:'以下哪些是Linux中的特殊权限位？（多选）', options:['SUID','SGID','Sticky Bit','SUDP'], answer:[0,1,2], score:5 },
+      // --- 命令选择题 ---
+      { type:'single', question:'要递归修改目录 mydir 及其下所有文件的权限为 755，应使用什么命令？', options:['chmod 755 mydir','chmod -R 755 mydir','chmod --recursive 755 mydir','chmod 755 mydir/*'], answer:1, score:5 },
+      { type:'single', question:'要将文件 file.txt 的所有者改为 user1，所属组改为 group1，应使用什么命令？', options:['chown user1:group1 file.txt','chown user1 group1 file.txt','chown --owner=user1 --group=group1 file.txt','own user1:group1 file.txt'], answer:0, score:5 },
+      // --- 填空题（实际敲代码）---
+      { type:'fill', question:'将文件 script.sh 的权限设置为所有者可读写执行，其他人只读和执行，请输入命令（数字法）', answer:'chmod 755 script.sh', hint:'chmod <数字> <文件>', score:5 },
+      { type:'fill', question:'使用符号法给文件 readme.txt 的组用户添加写权限，请输入命令', answer:'chmod g+w readme.txt', hint:'chmod <对象><操作><权限> <文件>', score:5 },
+      { type:'fill', question:'将 file.txt 的所有者改为 root，请输入命令', answer:'chown root file.txt', hint:'chown <用户> <文件>', score:5 },
+      { type:'fill', question:'查看文件 file.txt 的ACL权限，请输入命令', answer:'getfacl file.txt', hint:'getfacl <文件>', score:5 },
+      { type:'fill', question:'给用户 guest 对文件 data.txt 设置读写权限（ACL），请输入命令', answer:'setfacl -m u:guest:rw data.txt', hint:'setfacl -m u:<用户>:<权限> <文件>', score:5 },
+      { type:'fill', question:'设置当前 umask 值为 027，请输入命令', answer:'umask 027', hint:'umask <值>', score:5 },
+      { type:'fill', question:'给文件 program 设置 SUID 权限（数字法，基础权限755），请输入命令', answer:'chmod 4755 program', hint:'chmod <4位数字> <文件>', score:5 },
+      { type:'fill', question:'给目录 /shared 设置 SGID 权限（数字法，基础权限2770），请输入命令', answer:'chmod 2770 /shared', hint:'chmod <4位数字> <目录>', score:5 },
+      { type:'fill', question:'移除文件 important.txt 的不可变属性（i属性），请输入命令', answer:'chattr -i important.txt', hint:'chattr -<属性> <文件>', score:5 },
+    ]
+  },
+  {
+    id: 5,
+    name: '软件管理区',
+    desc: 'RPM / YUM / 软件源配置 / 下载工具',
+    color: '#ffd700',
+    questions: [
+      // --- 概念选择题 ---
+      { type:'single', question:'RPM包的全称是什么？', options:['RedHat Package Manager','Remote Package Manager','Rapid Package Management','Runtime Package Module'], answer:0, score:5 },
+      { type:'single', question:'YUM的作用是什么？', options:['管理网络接口','自动解决依赖关系的软件包管理器','管理用户账户','编译软件源代码'], answer:1, score:5 },
+      { type:'single', question:'YUM的仓库配置文件通常存放在哪个目录下？', options:['/etc/rpm/','/etc/yum.conf','/etc/yum.repos.d/','/var/yum/repos/'], answer:2, score:5 },
+      { type:'single', question:'YUM仓库配置文件中，enabled=1 表示什么？', options:['启用该仓库','禁用该仓库','设置仓库优先级','设置超时时间'], answer:0, score:5 },
+      { type:'single', question:'YUM仓库配置文件中，gpgcheck=1 表示什么？', options:['启用GPG签名验证','禁用GPG签名验证','启用网络检查','禁用防火墙'], answer:0, score:5 },
+      { type:'single', question:'以下哪个命令可以查询系统中已安装的所有RPM包？', options:['rpm -qa','rpm -ql','rpm -qi','rpm -qc'], answer:0, score:5 },
+      { type:'single', question:'wget 命令的主要功能是什么？', options:['发送邮件','从网络上下载文件','压缩文件','编辑文本'], answer:1, score:5 },
+      { type:'single', question:'curl 命令和 wget 命令的区别之一是？', options:['curl不支持HTTP','curl功能更丰富，可模拟浏览器请求','wget只能下载HTTPS','curl不能下载文件'], answer:1, score:5 },
+      { type:'single', question:'rpm -qi 命令中的 i 选项代表什么含义？', options:['安装','查询包的详细信息','列出包中的文件','卸载'], answer:1, score:5 },
+      { type:'single', question:'以下哪个命令可以从YUM仓库中搜索软件包？', options:['yum search','yum find','yum lookfor','yum query'], answer:0, score:5 },
+      // --- 命令选择题 ---
+      { type:'single', question:'要查看某个已安装RPM包中包含的文件列表，应使用什么命令？', options:['rpm -qi package','rpm -ql package','rpm -qc package','rpm -qd package'], answer:1, score:5 },
+      { type:'single', question:'要从YUM仓库安装 httpd 软件包，应使用什么命令？', options:['yum add httpd','yum install httpd','yum get httpd','yum setup httpd'], answer:1, score:5 },
+      // --- 填空题（实际敲代码）---
+      { type:'fill', question:'查询系统中是否安装了 vim 软件包，请输入命令', answer:'rpm -q vim', hint:'rpm -q <包名>', score:5 },
+      { type:'fill', question:'查看 vim 软件包的详细信息（版本、发行号等），请输入命令', answer:'rpm -qi vim', hint:'rpm -qi <包名>', score:5 },
+      { type:'fill', question:'使用YUM安装 gcc 编译器，请输入命令', answer:'yum install gcc', hint:'yum install <包名>', score:5 },
+      { type:'fill', question:'使用YUM卸载 httpd 软件包，请输入命令', answer:'yum remove httpd', hint:'yum remove <包名>', score:5 },
+      { type:'fill', question:'使用YUM更新所有已安装的软件包，请输入命令', answer:'yum update', hint:'yum update', score:5 },
+      { type:'fill', question:'使用YUM列出所有可用的软件包组，请输入命令', answer:'yum grouplist', hint:'yum grouplist', score:5 },
+      { type:'fill', question:'使用wget下载文件 http://example.com/file.zip，请输入命令', answer:'wget http://example.com/file.zip', hint:'wget <URL>', score:5 },
+      { type:'fill', question:'使用curl下载文件并显示进度条，请输入命令', answer:'curl -O http://example.com/file.zip', hint:'curl -O <URL>', score:5 },
+      { type:'fill', question:'使用YUM只下载 httpd 的安装包而不安装，请输入命令', answer:'yum install --downloadonly httpd', hint:'yum install --downloadonly <包名>', score:5 },
+    ]
+  },
+  // ========== ZONE 6: 综合实操挑战（企业案例） ==========
+  {
+    id: 6,
+    name: '综合实操挑战',
+    desc: '企业真实案例 / 全流程实战 / 综合运用',
+    color: '#ff6b35',
+    isBoss: true,
+    scenario: '你是某科技公司新入职的Linux运维工程师，今天公司新采购了一台CentOS 7服务器（IP: 192.168.10.100），主管要求你在下班前完成服务器的初始化部署，为开发团队搭建Web开发环境。你需要独立完成从系统信息确认、用户创建、网络配置、权限设置到软件安装的全部工作。加油！',
+    questions: [
+      // ===== 场景一：系统巡检（基础命令） =====
+      { type:'single', question:'【系统巡检】登录服务器后，你首先想确认操作系统的版本信息，应使用哪个命令？', options:['uname -r','cat /etc/centos-release','hostname','whoami'], answer:1, score:5 },
+      { type:'fill', question:'【系统巡检】查看当前服务器的内核版本，请输入命令', answer:'uname -r', hint:'uname -r', score:5 },
+      { type:'fill', question:'【系统巡检】查看服务器磁盘使用情况，请输入命令', answer:'df -h', hint:'df -h', score:5 },
+      { type:'fill', question:'【系统巡检】查看当前目录的磁盘占用大小（含子目录），请输入命令', answer:'du -sh', hint:'du -sh', score:5 },
+
+      // ===== 场景二：团队用户搭建（用户管理） =====
+      { type:'single', question:'【用户搭建】公司有3个开发组：frontend、backend、devops。创建用户组应使用哪个命令？', options:['useradd -g','groupadd','addgroup','newgrp'], answer:1, score:5 },
+      { type:'fill', question:'【用户搭建】创建用户组 frontend，请输入命令', answer:'groupadd frontend', hint:'groupadd <组名>', score:5 },
+      { type:'fill', question:'【用户搭建】创建开发者 zhangsan 并指定其主组为 frontend，请输入命令', answer:'useradd -g frontend zhangsan', hint:'useradd -g <组> <用户名>', score:5 },
+      { type:'fill', question:'【用户搭建】为用户 zhangsan 设置初始密码，请输入命令', answer:'passwd zhangsan', hint:'passwd <用户名>', score:5 },
+      { type:'single', question:'【用户搭建】后来 zhangsan 需要同时参与 backend 组的项目，应使用哪个命令将其追加到 backend 组？', options:['usermod -g backend zhangsan','usermod -aG backend zhangsan','groupadd backend zhangsan','useradd -G backend zhangsan'], answer:1, score:5 },
+      { type:'single', question:'【用户搭建】主管要求查看 /etc/passwd 文件中 zhangsan 的信息，该文件中每行由冒号分隔，第3个字段表示什么？', options:['用户名','UID','GID','登录Shell'], answer:1, score:5 },
+
+      // ===== 场景三：网络配置（网络） =====
+      { type:'single', question:'【网络配置】你需要确认服务器网卡 ens33 是否正确获取到 192.168.10.100 的IP地址，应使用哪个命令？', options:['ping 192.168.10.100','ip addr show ens33','route -n','ifdown ens33'], answer:1, score:5 },
+      { type:'fill', question:'【网络配置】使用 nmcli 查看 ens33 网卡的当前连接信息，请输入命令', answer:'nmcli device show ens33', hint:'nmcli device show <设备名>', score:5 },
+      { type:'single', question:'【网络配置】公司要求开放 Web 服务的 80 端口和 443 端口，使用 firewall-cmd 开放端口后，还需要执行什么操作才能生效？', options:['重启服务器','重新加载防火墙规则','重启网络服务','不需要额外操作'], answer:1, score:5 },
+      { type:'fill', question:'【网络配置】使用 firewall-cmd 永久开放 80 端口（TCP），请输入命令', answer:'firewall-cmd --zone=public --add-port=80/tcp --permanent', hint:'firewall-cmd --zone=public --add-port=<端口/协议> --permanent', score:5 },
+      { type:'fill', question:'【网络配置】重新加载防火墙规则使刚才的配置生效，请输入命令', answer:'firewall-cmd --reload', hint:'firewall-cmd --reload', score:5 },
+
+      // ===== 场景四：项目目录与权限（文件权限） =====
+      { type:'single', question:'【权限配置】你需要创建项目目录 /projects/webapp，并设置权限使得 frontend 组的成员可以读写，其他人只能读取和执行。应该设置什么权限数字？', options:['775','750','770','755'], answer:0, score:5 },
+      { type:'fill', question:'【权限配置】创建目录 /projects/webapp，请输入命令', answer:'mkdir -p /projects/webapp', hint:'mkdir -p <路径>', score:5 },
+      { type:'fill', question:'【权限配置】将 /projects/webapp 的所属组改为 frontend，请输入命令', answer:'chgrp frontend /projects/webapp', hint:'chgrp <组> <路径>', score:5 },
+      { type:'fill', question:'【权限配置】将 /projects/webapp 权限设置为 775，请输入命令', answer:'chmod 775 /projects/webapp', hint:'chmod <数字> <路径>', score:5 },
+      { type:'single', question:'【权限配置】为了让新建的文件自动继承父目录的组（即 frontend），需要对目录设置什么特殊权限？', options:['SUID','SGID','Sticky Bit','ACL'], answer:1, score:5 },
+      { type:'fill', question:'【权限配置】给 /projects/webapp 设置 SGID 特殊权限（在775基础上），请输入命令', answer:'chmod 2775 /projects/webapp', hint:'chmod <4位数字> <路径>', score:5 },
+
+      // ===== 场景五：软件部署（软件管理） =====
+      { type:'single', question:'【软件部署】你需要安装 httpd（Apache）Web服务器，公司使用的是 CentOS 7，应使用哪个包管理器？', options:['apt','yum','dnf','pacman'], answer:1, score:5 },
+      { type:'fill', question:'【软件部署】使用 YUM 安装 httpd 服务，请输入命令', answer:'yum install httpd -y', hint:'yum install <包名> -y', score:5 },
+      { type:'single', question:'【软件部署】安装完成后，你想确认 httpd 包是否安装成功以及安装的版本号，应使用哪个命令？', options:['yum list httpd','rpm -q httpd','which httpd','find httpd'], answer:1, score:5 },
+      { type:'fill', question:'【软件部署】查看 httpd 安装包的详细信息（版本、描述等），请输入命令', answer:'rpm -qi httpd', hint:'rpm -qi <包名>', score:5 },
+      { type:'single', question:'【软件部署】开发团队还需要部署 Git 进行版本控制，安装 Git 后你想查看 git 命令属于哪个软件包，应使用什么命令？', options:['rpm -q git','which git','rpm -qf $(which git)','yum info git'], answer:2, score:5 },
+      { type:'fill', question:'【软件部署】使用 wget 从 https://repo.example.com/deploy.sh 下载部署脚本，请输入命令', answer:'wget https://repo.example.com/deploy.sh', hint:'wget <URL>', score:5 },
+
+      // ===== 场景六：收尾验证 =====
+      { type:'single', question:'【收尾验证】所有配置完成后，主管让你确认 httpd 服务已启动并设为开机自启。应使用哪个命令？', options:['service httpd start','systemctl enable --now httpd','/etc/init.d/httpd start','httpd -k start'], answer:1, score:5 },
+      { type:'fill', question:'【收尾验证】查看 httpd 服务的运行状态，请输入命令', answer:'systemctl status httpd', hint:'systemctl status <服务名>', score:5 },
+      { type:'single', question:'【收尾验证】最后，你想通过查看系统日志确认今天所有的用户操作记录，应查看哪个日志文件？', options:['/var/log/messages','/var/log/secure','/var/log/boot.log','/var/log/dmesg'], answer:1, score:5 },
+    ]
+  }
+];
+
+// ===================================================================
+// ============================= 游戏逻辑 =============================
+// ===================================================================
+
+const STATE = {
+  playerName: '探险者',
+  zoneStatus: [1, 0, 0, 0, 0, 0], // 0=锁定, 1=可用, 2=通关 (6关)
+  zoneScores: [0, 0, 0, 0, 0, 0],
+  totalScore: 0,
+  currentZone: null,
+  currentQ: 0,
+  currentScore: 0,
+  selectedOptions: [],
+  answered: false,
+  shuffleSeed: [],  // 记录每关的题目随机顺序
+  answerHistory: [] // 记录每道题的答题结果 [{zoneIdx, qIdx, type, correct, userAnswer, rightAnswer}]
+};
+
+const PASS_PERCENT = 60;
+const SCORE_STORAGE_KEY = 'linux-map-game-score-records';
+
+// 初始化星空背景
+function initStars() {
+  const bg = document.getElementById('stars-bg');
+  for (let i = 0; i < 120; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    const size = Math.random() * 2.5 + 0.5;
+    star.style.width = size + 'px';
+    star.style.height = size + 'px';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.animationDelay = Math.random() * 3 + 's';
+    star.style.animationDuration = (2 + Math.random() * 3) + 's';
+    bg.appendChild(star);
+  }
+}
+
+// 显示Toast
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// 切换屏幕（必须显式设置display值，不能用空字符串，否则CSS的display:none会生效）
+const SCREEN_DISPLAY = {
+  'screen-title':  'flex',
+  'screen-map':    'block',
+  'screen-quiz':   'block',
+  'screen-result': 'block',
+  'screen-final':  'block',
+  'screen-stats':  'block'
+};
+const ALL_SCREENS = ['screen-title','screen-map','screen-quiz','screen-result','screen-final','screen-stats'];
+function showScreen(id) {
+  ALL_SCREENS.forEach(s => {
+    document.getElementById(s).style.display = (s === id) ? SCREEN_DISPLAY[s] : 'none';
+  });
+}
+
+// 开始游戏
+function startGame() {
+  const nameInput = document.getElementById('player-name').value.trim();
+  STATE.playerName = nameInput || '探险者';
+  STATE.zoneStatus = [1, 0, 0, 0, 0, 0];
+  STATE.zoneScores = [0, 0, 0, 0, 0, 0];
+  STATE.totalScore = 0;
+  STATE.answerHistory = [];
+  // 为每关生成随机顺序
+  STATE.shuffleSeed = ZONES.map(z => shuffleArray([...Array(z.questions.length).keys()]));
+  document.getElementById('map-player-name').textContent = STATE.playerName;
+  document.getElementById('avatar-letter').textContent = STATE.playerName.charAt(0).toUpperCase();
+  showScreen('screen-map');
+  renderMap();
+}
+
+// Fisher-Yates 洗牌
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// 渲染地图
+function renderMap() {
+  const grid = document.getElementById('zones-grid');
+  const completedZones = STATE.zoneStatus.filter(s => s === 2).length;
+  document.getElementById('map-total-score').textContent = STATE.totalScore;
+  document.getElementById('map-progress-fill').style.width = (completedZones / 6 * 100) + '%';
+
+  // 计算评级
+  const rank = getRank();
+  document.getElementById('map-player-rank').textContent = 'RANK: ' + rank;
+
+  let html = '';
+  ZONES.forEach((zone, idx) => {
+    const status = STATE.zoneStatus[idx];
+    const cls = status === 0 ? 'locked' : (status === 2 ? 'completed' : 'available');
+    const bossCls = zone.isBoss ? ' boss-zone' : '';
+    html += `
+      <div class="zone-card ${cls}${bossCls}" onclick="${status === 0 ? '' : 'enterZone('+idx+')'}">
+        ${status === 0 ? '<div class="zone-lock-icon">&#x1f512;</div>' : ''}
+        ${status === 2 ? '<div class="zone-check-icon">&#x2714;</div>' : ''}
+        ${zone.isBoss ? '<div class="zone-boss-badge">&#x1f525; BOSS</div>' : ''}
+        <div class="zone-badge">${status === 2 ? '&#x2714;' : zone.id}</div>
+        <div class="zone-name">${zone.name}</div>
+        <div class="zone-desc">${zone.desc}</div>
+        <div class="zone-qcount">${zone.questions.length} QUESTIONS${status === 2 ? ' | SCORE: ' + STATE.zoneScores[idx] : ''}</div>
+        ${zone.isBoss && status === 0 ? '<div class="zone-boss-hint">&#x1f512; 通关前5关解锁</div>' : ''}
+      </div>`;
+  });
+  grid.innerHTML = html;
+
+  // 绘制连线SVG
+  const svg = document.getElementById('map-svg');
+  svg.innerHTML = '';
+}
+
+// 进入关卡
+function enterZone(zoneIdx) {
+  if (STATE.zoneStatus[zoneIdx] === 0) return;
+  clearZoneHistory(zoneIdx);
+  STATE.currentZone = zoneIdx;
+  STATE.currentQ = 0;
+  STATE.currentScore = 0;
+  STATE.answered = false;
+  STATE.selectedOptions = [];
+
+  const zone = ZONES[zoneIdx];
+
+  // Boss关卡：先显示场景描述
+  if (zone.isBoss && zone.scenario) {
+    showScreen('screen-quiz');
+    document.getElementById('quiz-zone-name').textContent = `ZONE ${zone.id}: ${zone.name}`;
+    // 渲染场景介绍卡
+    const card = document.getElementById('question-card');
+    card.innerHTML = `
+      <div class="boss-scenario">
+        <div class="boss-scenario-icon">&#x1f3e2;</div>
+        <div class="boss-scenario-title">企业实战场景</div>
+        <div class="boss-scenario-text">${escapeHtml(zone.scenario)}</div>
+        <div class="boss-scenario-hint">&#x1f4dd; 共 ${zone.questions.length} 道实操题，涵盖全部五大知识领域</div>
+        <button class="btn-result primary" onclick="renderQuestion()" style="margin-top:20px;">&#x1f680; 开始挑战</button>
+      </div>
+    `;
+    // 重置提交按钮
+    const btn = document.getElementById('btn-submit');
+    btn.className = 'btn-submit disabled';
+    btn.textContent = 'SUBMIT';
+    return;
+  }
+
+  showScreen('screen-quiz');
+  document.getElementById('quiz-zone-name').textContent = `ZONE ${zone.id}: ${zone.name}`;
+  renderQuestion();
+}
+
+// HTML转义：防止题目/提示中的 < > " & 破坏HTML结构
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function normalizeCommand(str) {
+  return String(str).replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function getAnswerList(answer) {
+  return Array.isArray(answer) ? answer : [answer];
+}
+
+function getAnswerText(answer) {
+  return getAnswerList(answer).join(' 或 ');
+}
+
+function isFillAnswerCorrect(question, userAnswer) {
+  const userNorm = normalizeCommand(userAnswer);
+  return getAnswerList(question.answer).some(ans => normalizeCommand(ans) === userNorm);
+}
+
+function getZoneTotalScore(zone) {
+  return zone.questions.reduce((sum, q) => sum + (q.score || 0), 0);
+}
+
+function getZonePassScore(zone) {
+  return Math.ceil(getZoneTotalScore(zone) * PASS_PERCENT / 100);
+}
+
+function clearZoneHistory(zoneIdx) {
+  STATE.answerHistory = STATE.answerHistory.filter(r => r.zoneIdx !== zoneIdx);
+}
+
+function getAccuracyStats() {
+  const records = STATE.answerHistory;
+  const answered = records.length;
+  const correct = records.filter(r => r.correct).length;
+  return {
+    answered,
+    correct,
+    wrong: answered - correct,
+    accuracy: answered > 0 ? Math.round(correct / answered * 100) : 0
+  };
+}
+
+function buildScoreRecord() {
+  const maxScore = ZONES.reduce((sum, z) => sum + getZoneTotalScore(z), 0);
+  const stats = getAccuracyStats();
+  const zones = ZONES.map((zone, idx) => {
+    const zoneRecords = STATE.answerHistory.filter(r => r.zoneIdx === idx);
+    const answered = zoneRecords.length;
+    const correct = zoneRecords.filter(r => r.correct).length;
+    return {
+      id: zone.id,
+      name: zone.name,
+      score: STATE.zoneScores[idx],
+      maxScore: getZoneTotalScore(zone),
+      status: STATE.zoneStatus[idx] === 2 ? 'cleared' : (STATE.zoneStatus[idx] === 1 ? 'available' : 'locked'),
+      answered,
+      correct,
+      accuracy: answered > 0 ? Math.round(correct / answered * 100) : 0
+    };
+  });
+
+  return {
+    savedAt: new Date().toLocaleString('zh-CN', { hour12: false }),
+    playerName: STATE.playerName,
+    totalScore: STATE.totalScore,
+    maxScore,
+    percent: maxScore > 0 ? Math.round(STATE.totalScore / maxScore * 100) : 0,
+    rank: getRank(),
+    summary: stats,
+    zones
+  };
+}
+
+function loadLocalScoreRecords() {
+  try {
+    return JSON.parse(localStorage.getItem(SCORE_STORAGE_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveRecordToLocalStorage(record) {
+  const records = loadLocalScoreRecords();
+  records.push(record);
+  localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(records));
+  return records;
+}
+
+async function saveScoreToFile() {
+  const record = buildScoreRecord();
+  const records = saveRecordToLocalStorage(record);
+  const content = JSON.stringify(records, null, 2);
+  const fileName = 'linux-map-game-scores.json';
+
+  try {
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{
+          description: 'JSON 成绩文件',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(content);
+      await writable.close();
+      showToast('成绩已写入本地文件');
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') {
+      showToast('已取消保存');
+      return;
+    }
+  }
+
+  const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('成绩文件已下载');
+}
+
+// 渲染题目
+function renderQuestion() {
+  const zone = ZONES[STATE.currentZone];
+  const qIdx = STATE.shuffleSeed[STATE.currentZone][STATE.currentQ];
+  const q = zone.questions[qIdx];
+  STATE.answered = false;
+  STATE.selectedOptions = [];
+
+  document.getElementById('quiz-progress-text').textContent = `${STATE.currentQ + 1} / ${zone.questions.length}`;
+  document.getElementById('quiz-score-text').textContent = STATE.currentScore;
+  document.getElementById('quiz-progress-fill').style.width = ((STATE.currentQ) / zone.questions.length * 100) + '%';
+
+  const btn = document.getElementById('btn-submit');
+  btn.className = 'btn-submit disabled';
+  btn.textContent = 'SUBMIT';
+
+  const card = document.getElementById('question-card');
+
+  let typeBadge = '';
+  if (q.type === 'single') typeBadge = '<span class="q-type-badge single">单选题</span>';
+  else if (q.type === 'multi') typeBadge = '<span class="q-type-badge multi">多选题</span>';
+  else typeBadge = '<span class="q-type-badge fill">填空题</span>';
+
+  let body = '';
+
+  if (q.type === 'fill') {
+    // 填空题：不把hint放入placeholder（避免引号破坏属性），改用DOM操作
+    body = `
+      <div class="fill-input-wrap">
+        <span class="fill-prompt">$ </span>
+        <input class="fill-input" id="fill-input" placeholder="输入命令..." autocomplete="off">
+      </div>
+      <div class="fill-hint-text" id="fill-hint-text"></div>
+      <div class="fill-answer-hint" id="fill-hint"></div>
+    `;
+  } else {
+    const letters = ['A','B','C','D','E','F'];
+    const optHtml = q.options.map((opt, i) => `
+      <div class="option-item" onclick="selectOption(${i})" data-idx="${i}">
+        <div class="option-letter">${letters[i]}</div>
+        <div class="option-text">${escapeHtml(opt)}</div>
+      </div>
+    `).join('');
+    body = q.type === 'multi' ? '<div class="multi-hint">&#x2714; 多选题：请选择所有正确答案</div>' + optHtml : optHtml;
+  }
+
+  card.innerHTML = `
+    <div class="q-number">QUESTION ${STATE.currentQ + 1} ${typeBadge}</div>
+    <div class="q-text">${escapeHtml(q.question)}</div>
+    ${body}
+  `;
+
+  // 填空题：用DOM API安全设置placeholder和hint，避免引号问题
+  if (q.type === 'fill') {
+    setTimeout(() => {
+      const input = document.getElementById('fill-input');
+      const hintEl = document.getElementById('fill-hint-text');
+      if (input) {
+        input.placeholder = q.hint || '输入命令...';
+        input.focus();
+        // Enter键提交
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') submitAnswer();
+        });
+      }
+      // 显示格式提示
+      if (hintEl && q.hint) {
+        hintEl.textContent = '💡 提示格式: ' + q.hint;
+      }
+    }, 100);
+  }
+}
+
+// 选择选项
+function selectOption(idx) {
+  if (STATE.answered) return;
+  const zone = ZONES[STATE.currentZone];
+  const qIdx = STATE.shuffleSeed[STATE.currentZone][STATE.currentQ];
+  const q = zone.questions[qIdx];
+
+  if (q.type === 'single') {
+    STATE.selectedOptions = [idx];
+    document.querySelectorAll('.option-item').forEach((el, i) => {
+      el.classList.toggle('selected', i === idx);
+    });
+    document.getElementById('btn-submit').className = 'btn-submit active';
+  } else if (q.type === 'multi') {
+    const pos = STATE.selectedOptions.indexOf(idx);
+    if (pos >= 0) STATE.selectedOptions.splice(pos, 1);
+    else STATE.selectedOptions.push(idx);
+    STATE.selectedOptions.sort();
+    document.querySelectorAll('.option-item').forEach((el, i) => {
+      el.classList.toggle('selected', STATE.selectedOptions.includes(i));
+    });
+    document.getElementById('btn-submit').className = STATE.selectedOptions.length > 0 ? 'btn-submit active' : 'btn-submit disabled';
+  }
+}
+
+// 提交答案
+function submitAnswer() {
+  if (STATE.answered) return;
+
+  const zone = ZONES[STATE.currentZone];
+  const qIdx = STATE.shuffleSeed[STATE.currentZone][STATE.currentQ];
+  const q = zone.questions[qIdx];
+
+  if (q.type === 'fill') {
+    const input = document.getElementById('fill-input');
+    const userAnswer = input.value.trim();
+    if (!userAnswer) return;
+    STATE.answered = true;
+
+    const isCorrect = isFillAnswerCorrect(q, userAnswer);
+
+    input.classList.add(isCorrect ? 'correct' : 'wrong');
+    input.disabled = true;
+
+    if (!isCorrect) {
+      const hint = document.getElementById('fill-hint');
+      hint.textContent = '正确答案: ' + getAnswerText(q.answer);
+      hint.classList.add('visible');
+    }
+
+    if (isCorrect) {
+      STATE.currentScore += q.score;
+      spawnParticles(window.innerWidth / 2, window.innerHeight / 2, '#00ff88');
+      showScorePopup(window.innerWidth / 2, window.innerHeight / 2 - 40, '+' + q.score, true);
+    } else {
+      showScorePopup(window.innerWidth / 2, window.innerHeight / 2 - 40, '0', false);
+    }
+    // 记录填空题答题历史
+    STATE.answerHistory.push({
+      zoneIdx: STATE.currentZone,
+      qIdx: qIdx,
+      type: 'fill',
+      correct: isCorrect,
+      userAnswer: userAnswer,
+      rightAnswer: getAnswerText(q.answer)
+    });
+  } else {
+    if (q.type === 'single' && STATE.selectedOptions.length === 0) return;
+    if (q.type === 'multi' && STATE.selectedOptions.length === 0) return;
+    STATE.answered = true;
+
+    const isCorrect = q.type === 'single'
+      ? STATE.selectedOptions[0] === q.answer
+      : JSON.stringify(STATE.selectedOptions.sort()) === JSON.stringify([...q.answer].sort());
+
+    // 标记正确/错误选项
+    document.querySelectorAll('.option-item').forEach((el, i) => {
+      el.classList.add('disabled');
+      if (q.type === 'single') {
+        if (i === q.answer) el.classList.add('correct');
+        if (i === STATE.selectedOptions[0] && i !== q.answer) el.classList.add('wrong');
+      } else {
+        if (q.answer.includes(i)) el.classList.add('correct');
+        if (STATE.selectedOptions.includes(i) && !q.answer.includes(i)) el.classList.add('wrong');
+      }
+    });
+
+    if (isCorrect) {
+      STATE.currentScore += q.score;
+      spawnParticles(window.innerWidth / 2, window.innerHeight / 2, '#00ff88');
+      showScorePopup(window.innerWidth / 2, window.innerHeight / 2 - 40, '+' + q.score, true);
+    } else {
+      showScorePopup(window.innerWidth / 2, window.innerHeight / 2 - 40, '0', false);
+    }
+    // 记录选择题答题历史
+    const letters = ['A','B','C','D','E','F'];
+    STATE.answerHistory.push({
+      zoneIdx: STATE.currentZone,
+      qIdx: qIdx,
+      type: q.type,
+      correct: isCorrect,
+      userAnswer: STATE.selectedOptions.map(i => letters[i]).join(''),
+      rightAnswer: q.type === 'single' ? letters[q.answer] : [...q.answer].map(i => letters[i]).join('')
+    });
+  }
+
+  document.getElementById('quiz-score-text').textContent = STATE.currentScore;
+  const btn = document.getElementById('btn-submit');
+  btn.textContent = 'NEXT';
+  btn.className = 'btn-submit active';
+  // 不再手动设置btn.onclick，由handleBtnClick统一路由
+}
+
+// 下一题
+function nextQuestion() {
+  STATE.currentQ++;
+  if (STATE.currentQ >= ZONES[STATE.currentZone].questions.length) {
+    showZoneResult();
+  } else {
+    renderQuestion();
+  }
+}
+
+// 显示关卡结果
+function showZoneResult() {
+  const zone = ZONES[STATE.currentZone];
+  const total = getZoneTotalScore(zone);
+  const passScore = getZonePassScore(zone);
+  const passed = STATE.currentScore >= passScore;
+  const percent = Math.round(STATE.currentScore / total * 100);
+
+  // 只有通过才标记通关、更新总分、解锁下一关
+  if (passed) {
+    STATE.zoneStatus[STATE.currentZone] = 2;
+    STATE.zoneScores[STATE.currentZone] = STATE.currentScore;
+    STATE.totalScore = STATE.zoneScores.reduce((a, b) => a + b, 0);
+    // 解锁下一关（前5关顺序解锁第2-5关；Boss关不解锁新关）
+    if (STATE.currentZone < 4) {
+      STATE.zoneStatus[STATE.currentZone + 1] = 1;
+    }
+    // 前5关全部通关后，解锁Boss关（第6关）
+    if (STATE.currentZone <= 4 && STATE.zoneStatus.slice(0, 5).every(s => s === 2)) {
+      STATE.zoneStatus[5] = 1;
+    }
+  }
+
+  showScreen('screen-result');
+  document.getElementById('result-card').innerHTML = `
+    <div class="result-icon">${passed ? '&#x1f389;' : '&#x1f614;'}</div>
+    <div class="result-title">${passed ? 'ZONE CLEARED!' : 'ZONE FAILED'}</div>
+    <div class="result-score">${STATE.currentScore} / ${total}</div>
+    <div class="result-detail">${zone.name} | 正确率 ${percent}% | ${passed ? '通关成功' : '需要达到' + PASS_PERCENT + '%（' + passScore + '分）才能通关，再试一次吧！'}</div>
+    <div class="result-buttons">
+      ${passed && STATE.currentZone < 5 ? '<button class="btn-result primary" onclick="nextZone()">下一关</button>' : ''}
+      ${!passed ? '<button class="btn-result primary" onclick="retryZone()">重新挑战</button>' : ''}
+      <button class="btn-result secondary" onclick="showStatsScreen()">&#x1f4ca; 查看统计</button>
+      <button class="btn-result secondary" onclick="saveScoreToFile()">保存成绩</button>
+      <button class="btn-result secondary" onclick="backToMap()">返回地图</button>
+    </div>
+  `;
+
+  if (passed) {
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        spawnParticles(
+          Math.random() * window.innerWidth,
+          Math.random() * window.innerHeight,
+          zone.color
+        );
+      }, i * 200);
+    }
+  }
+}
+
+// 进入下一关
+function nextZone() {
+  enterZone(STATE.currentZone + 1);
+}
+
+// 重试当前关卡
+function retryZone() {
+  clearZoneHistory(STATE.currentZone);
+  enterZone(STATE.currentZone);
+}
+
+// 返回地图
+function backToMap() {
+  showScreen('screen-map');
+  renderMap();
+
+  // 检查是否全部通关（仅已通关的关卡计入，未通关的可以继续挑战）
+  const allCleared = STATE.zoneStatus.every(s => s === 2);
+  if (allCleared) {
+    setTimeout(showFinalScreen, 600);
+  }
+}
+
+// 显示最终结果
+function showFinalScreen() {
+  const total = ZONES.reduce((sum, z) => sum + getZoneTotalScore(z), 0);
+  const percent = Math.round(STATE.totalScore / total * 100);
+  const rank = getRank();
+  const rankClass = rank === 'S' ? 's-rank' : (rank === 'A' ? 'a-rank' : (rank === 'B' ? 'b-rank' : 'c-rank'));
+
+  let zonesHtml = ZONES.map((z, i) => `
+    <div class="final-zone-chip">
+      <div class="chip-name">ZONE ${z.id}: ${z.name}</div>
+      <div class="chip-score">${STATE.zoneScores[i]} / ${getZoneTotalScore(z)}</div>
+    </div>
+  `).join('');
+
+  showScreen('screen-final');
+  document.getElementById('final-card').innerHTML = `
+    <div class="final-rank ${rankClass}">${rank}</div>
+    <div class="final-title">MISSION COMPLETE</div>
+    <div class="final-score">TOTAL SCORE: ${STATE.totalScore} / ${total} (${percent}%)</div>
+    <div class="final-zones-summary">${zonesHtml}</div>
+    <div class="result-buttons">
+      <button class="btn-result primary" onclick="showStatsScreen()">&#x1f4ca; 查看统计</button>
+      <button class="btn-result secondary" onclick="saveScoreToFile()">保存成绩</button>
+      <button class="btn-result secondary" onclick="restartGame()">重新挑战</button>
+      <button class="btn-result secondary" onclick="backToMap()">返回地图</button>
+    </div>
+  `;
+
+  // 烟花效果
+  for (let i = 0; i < 10; i++) {
+    setTimeout(() => {
+      spawnParticles(
+        Math.random() * window.innerWidth,
+        Math.random() * window.innerHeight,
+        ['#00ff88','#00c8ff','#b44fff','#ffd700','#ff4466'][i % 5]
+      );
+    }, i * 300);
+  }
+}
+
+// 重新开始
+function restartGame() {
+  STATE.zoneStatus = [1, 0, 0, 0, 0, 0];
+  STATE.zoneScores = [0, 0, 0, 0, 0, 0];
+  STATE.totalScore = 0;
+  STATE.answerHistory = [];
+  STATE.shuffleSeed = ZONES.map(z => shuffleArray([...Array(z.questions.length).keys()]));
+  showScreen('screen-title');
+}
+
+// 获取评级
+function getRank() {
+  const maxScore = ZONES.reduce((sum, z) => sum + getZoneTotalScore(z), 0);
+  const percent = STATE.totalScore / maxScore;
+  if (percent >= 0.9) return 'S';
+  if (percent >= 0.8) return 'A';
+  if (percent >= 0.6) return 'B';
+  return 'C';
+}
+
+// 粒子爆炸效果
+function spawnParticles(x, y, color) {
+  for (let i = 0; i < 16; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    p.style.background = color;
+    const angle = (Math.PI * 2 / 16) * i + Math.random() * 0.3;
+    const dist = 40 + Math.random() * 80;
+    p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    p.style.width = (3 + Math.random() * 5) + 'px';
+    p.style.height = p.style.width;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 700);
+  }
+}
+
+// 得分弹窗
+function showScorePopup(x, y, text, positive) {
+  const el = document.createElement('div');
+  el.className = 'score-popup ' + (positive ? 'positive' : 'negative');
+  el.textContent = text;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.style.transform = 'translateX(-50%)';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+// 初始化
+window.addEventListener('DOMContentLoaded', () => {
+  initStars();
+  showScreen('screen-title');
+  // 统一绑定提交按钮事件（避免HTML onclick与JS onclick冲突）
+  document.getElementById('btn-submit').addEventListener('click', handleBtnClick);
+});
+
+// ===================================================================
+// ========================= 统计正确率模块 ===========================
+// ===================================================================
+
+function showStatsScreen() {
+  const h = STATE.answerHistory;
+  if (h.length === 0) {
+    showToast('还没有答题记录哦，先去挑战一关吧！');
+    return;
+  }
+
+  // — 总体统计 —
+  const totalAnswered = h.length;
+  const totalCorrect = h.filter(r => r.correct).length;
+  const overallPct = Math.round(totalCorrect / totalAnswered * 100);
+
+  // — 各关卡统计 —
+  const zoneStats = ZONES.map((zone, idx) => {
+    const zoneRecords = h.filter(r => r.zoneIdx === idx);
+    const answered = zoneRecords.length;
+    const correct = zoneRecords.filter(r => r.correct).length;
+    const pct = answered > 0 ? Math.round(correct / answered * 100) : 0;
+    return { zone, idx, answered, correct, pct, total: zone.questions.length };
+  });
+
+  // — 各题型统计 —
+  const typeMap = [
+    { key: 'single', name: '单选题', icon: '🔘' },
+    { key: 'multi',  name: '多选题', icon: '☑️' },
+    { key: 'fill',   name: '填空题', icon: '⌨️' }
+  ];
+  const typeStats = typeMap.map(t => {
+    const records = h.filter(r => r.type === t.key);
+    const answered = records.length;
+    const correct = records.filter(r => r.correct).length;
+    const pct = answered > 0 ? Math.round(correct / answered * 100) : 0;
+    return { ...t, answered, correct, pct };
+  });
+
+  // — 构建关卡进度条 HTML —
+  const zoneColors = ['#00ff88', '#b44fff', '#00c8ff', '#ffd700', '#ff4466', '#ff6b35'];
+  const zoneBarsHtml = zoneStats.map((zs, i) => `
+    <div class="stats-zone-bar-item">
+      <div class="stats-zone-bar-name">ZONE ${i+1} ${zs.zone.name}</div>
+      <div class="stats-zone-bar-track">
+        <div class="stats-zone-bar-fill" style="width:${zs.pct}%;background:${zoneColors[i]};"></div>
+      </div>
+      <div class="stats-zone-bar-pct">${zs.pct}%</div>
+    </div>
+  `).join('');
+
+  // — 题型统计 HTML —
+  const typeCardsHtml = typeStats.map(ts => `
+    <div class="stats-type-card">
+      <div class="stats-type-icon">${ts.icon}</div>
+      <div class="stats-type-name">${ts.name}</div>
+      <div class="stats-type-pct" style="color:${ts.pct >= 60 ? 'var(--neon-green)' : 'var(--neon-red)'}">${ts.pct}%</div>
+      <div class="stats-type-detail">${ts.correct} / ${ts.answered} 正确</div>
+    </div>
+  `).join('');
+
+  // — 答题详情 HTML（按关卡分组） —
+  let detailHtml = '';
+  ZONES.forEach((zone, zIdx) => {
+    const zoneRecords = h.filter(r => r.zoneIdx === zIdx);
+    if (zoneRecords.length === 0) return;
+    detailHtml += `<div class="stats-detail-zone-header" style="color:${zoneColors[zIdx]}">ZONE ${zIdx+1}: ${zone.name}</div>`;
+    zoneRecords.forEach((r, ri) => {
+      const q = zone.questions[r.qIdx];
+      const qText = escapeHtml(q.question.length > 50 ? q.question.substring(0, 50) + '...' : q.question);
+      const typeLabel = r.type === 'fill' ? '填空' : (r.type === 'multi' ? '多选' : '单选');
+      const yourAnsClass = r.correct ? 'your-ans' : 'your-ans wrong-ans';
+      detailHtml += `
+        <div class="stats-detail-item">
+          <div class="stats-detail-status ${r.correct ? 'correct' : 'wrong'}">${r.correct ? '✓' : '✗'}</div>
+          <div class="stats-detail-q">[${typeLabel}] ${qText}</div>
+          <div class="stats-detail-answers">
+            <div class="${r.correct ? 'your-ans' : yourAnsClass}">你的: ${escapeHtml(r.userAnswer)}</div>
+            <div class="right-ans">正确: ${escapeHtml(r.rightAnswer)}</div>
+          </div>
+        </div>
+      `;
+    });
+  });
+
+  // — 渲染 —
+  showScreen('screen-stats');
+  document.getElementById('stats-card').innerHTML = `
+    <div class="stats-header">
+      <div class="stats-title">&#x1f4ca; ACCURACY STATS</div>
+      <button class="btn-result secondary" onclick="backToMap()">返回地图</button>
+    </div>
+
+    <div class="stats-overall">
+      <div class="stats-overall-percent">${overallPct}%</div>
+      <div class="stats-overall-label">总体正确率</div>
+      <div class="stats-overall-detail">
+        <div class="stats-overall-item"><div class="num green">${totalCorrect}</div><div class="lbl">答对</div></div>
+        <div class="stats-overall-item"><div class="num red">${totalAnswered - totalCorrect}</div><div class="lbl">答错</div></div>
+        <div class="stats-overall-item"><div class="num gold">${totalAnswered}</div><div class="lbl">已答</div></div>
+        <div class="stats-overall-item"><div class="num" style="color:var(--text-dim)">${ZONES.reduce((s,z)=>s+z.questions.length,0) - totalAnswered}</div><div class="lbl">未答</div></div>
+      </div>
+    </div>
+
+    <div class="stats-section-title">各关卡正确率</div>
+    <div class="stats-zone-bars">${zoneBarsHtml}</div>
+
+    <div class="stats-section-title">各题型正确率</div>
+    <div class="stats-type-grid">${typeCardsHtml}</div>
+
+    <div class="stats-section-title">答题详情</div>
+    <div class="stats-detail-list">${detailHtml}</div>
+
+    <div class="stats-actions">
+      <button class="btn-result primary" onclick="saveScoreToFile()">保存成绩</button>
+      <button class="btn-result primary" onclick="backToMap()">返回地图</button>
+      <button class="btn-result secondary" onclick="restartGame()">重新开始</button>
+    </div>
+  `;
+}
+
+// 按钮点击路由：根据当前状态分发到 submitAnswer 或 nextQuestion
+function handleBtnClick() {
+  if (STATE.answered) {
+    nextQuestion();
+  } else {
+    submitAnswer();
+  }
+}
+</script>
+</body>
+</html>
