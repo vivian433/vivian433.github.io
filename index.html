@@ -1331,15 +1331,15 @@ const ZONES = [
       { type:'single', question:'以下哪个不是Linux中常见的Shell？', options:['bash','sh','zsh','cmd'], answer:3, score:5 },
       { type:'single', question:'Linux命令的一般格式为：命令名 [选项] [参数]。选项通常以什么符号开头？', options:['/','-','@','#'], answer:1, score:5 },
       { type:'single', question:'在终端中，~ 符号代表什么含义？', options:['根目录','当前用户的主目录','上一级目录','临时目录'], answer:1, score:5 },
-      { type:'single', question:'在Linux中，使用什么命令可以查看当前所在的绝对路径？', options:['cd','dir','pwd','path'], answer:2, score:5 },
-      { type:'single', question:'以下哪个命令可以查看当前目录下的文件列表（含隐藏文件）？', options:['ls -l','ls -a','ls -r','ls -d'], answer:1, score:5 },
+      { type:'fill', question:'查看当前所在的绝对路径，请输入命令', answer:'pwd', hint:'pwd', score:5 },
+      { type:'fill', question:'查看当前目录下的文件列表（含隐藏文件），请输入命令', answer:'ls -a', hint:'ls -a', score:5 },
       { type:'single', question:'硬链接和软链接的区别，以下说法正确的是？', options:['硬链接删除源文件后仍可访问','软链接删除源文件后仍可访问','两者完全相同','硬链接可以跨文件系统'], answer:0, score:5 },
       { type:'single', question:'重定向符号 > 的作用是什么？', options:['将命令输出追加到文件','将命令输出覆盖写入文件','读取文件内容','连接两个命令'], answer:1, score:5 },
       { type:'single', question:'管道符号 | 的作用是什么？', options:['同时执行两个命令','将前一个命令的输出作为后一个命令的输入','将错误信息输出到文件','连接两个文件'], answer:1, score:5 },
       { type:'single', question:'vim编辑器中，从命令模式切换到插入模式应按哪个键？', options:['Esc','i',':','dd'], answer:1, score:5 },
       // --- 命令选择题 ---
-      { type:'single', question:'要创建一个名为 mydir 的目录，应使用什么命令？', options:['file mydir','mkdir mydir','newdir mydir','touch mydir'], answer:1, score:5 },
-      { type:'single', question:'要递归删除目录 mydir 及其内容，应使用什么命令？', options:['rm -r mydir','del mydir','rmdir mydir','erase mydir'], answer:0, score:5 },
+      { type:'fill', question:'创建一个名为 mydir 的目录，请输入命令', answer:'mkdir mydir', hint:'mkdir <目录名>', score:5 },
+      { type:'fill', question:'递归删除目录 mydir 及其内容，请输入命令', answer:['rm -r mydir','rm -rf mydir'], hint:'rm -r <目录名>', score:5 },
       // --- 填空题（实际敲代码）---
       { type:'fill', question:'切换到 /home/user 目录，请输入命令（完整命令）', answer:'cd /home/user', hint:'cd <路径>', score:5 },
       { type:'fill', question:'创建空文件 readme.txt，请输入命令', answer:'touch readme.txt', hint:'touch <文件名>', score:5 },
@@ -1364,14 +1364,14 @@ const ZONES = [
       { type:'single', question:'Linux中真正存储用户密码（加密后）的文件是？', options:['/etc/passwd','/etc/shadow','/etc/group','/etc/secure'], answer:1, score:5 },
       { type:'single', question:'/etc/group 文件中每行包含几个字段？', options:['3个','4个','5个','6个'], answer:1, score:5 },
       { type:'single', question:'UID 为 0 的用户通常代表哪个账户？', options:['admin','root','guest','system'], answer:1, score:5 },
-      { type:'single', question:'以下哪个命令用于修改已有用户的信息（如用户名、家目录等）？', options:['useradd','usermod','userdel','userinfo'], answer:1, score:5 },
+      { type:'fill', question:'修改已有用户的信息（如用户名、家目录等）通常使用哪个命令？请输入命令名', answer:'usermod', hint:'usermod', score:5 },
       { type:'single', question:'su 命令的作用是什么？', options:['创建新用户','切换用户身份','删除用户','锁定用户'], answer:1, score:5 },
       { type:'single', question:'使用 sudo 时，系统通过哪个文件来控制用户的权限？', options:['/etc/passwd','/etc/sudoers','/etc/hosts','/etc/securetty'], answer:1, score:5 },
-      { type:'single', question:'编辑 sudoers 配置文件时，推荐使用什么命令？', options:['vi /etc/sudoers','nano /etc/sudoers','visudo','gedit /etc/sudoers'], answer:2, score:5 },
+      { type:'fill', question:'编辑 sudoers 配置文件时，推荐使用什么命令？请输入命令名', answer:'visudo', hint:'visudo', score:5 },
       { type:'multi', question:'以下哪些是有效的用户ID（UID）范围？（多选）', options:['root的UID为0','普通用户UID从1000开始','系统用户UID范围为1-999','UID可以为负数'], answer:[0,1,2], score:5 },
       // --- 命令选择题 ---
-      { type:'single', question:'要删除用户 user1 及其家目录，应使用什么命令？', options:['userdel user1','userdel -r user1','userdel --home user1','rmuser user1'], answer:1, score:5 },
-      { type:'single', question:'要查看当前用户的UID和GID信息，应使用什么命令？', options:['whoami','id','uid','who'], answer:1, score:5 },
+      { type:'fill', question:'删除用户 user1 及其家目录，请输入命令', answer:'userdel -r user1', hint:'userdel -r <用户名>', score:5 },
+      { type:'fill', question:'查看当前用户的 UID 和 GID 信息，请输入命令', answer:'id', hint:'id', score:5 },
       // --- 填空题（实际敲代码）---
       { type:'fill', question:'创建一个名为 student 的新用户，请输入命令', answer:'useradd student', hint:'useradd <用户名>', score:5 },
       { type:'fill', question:'为用户 student 设置密码，请输入命令（注意命令格式）', answer:'passwd student', hint:'passwd <用户名>', score:5 },
@@ -1393,17 +1393,17 @@ const ZONES = [
       // --- 概念选择题 ---
       { type:'single', question:'在CentOS/RHEL中，网卡配置文件通常存放在哪个目录下？', options:['/etc/network/','/etc/sysconfig/network-scripts/','/etc/netplan/','/etc/interfaces/'], answer:1, score:5 },
       { type:'single', question:'网卡配置文件中，BOOTPROTO=dhcp 表示什么？', options:['手动配置IP','通过DHCP自动获取IP','禁用网卡','设置为桥接模式'], answer:1, score:5 },
-      { type:'single', question:'以下哪个命令用于测试网络连通性？', options:['netstat','ping','nslookup','ifconfig'], answer:1, score:5 },
+      { type:'fill', question:'测试网络连通性通常使用哪个命令？请输入命令名', answer:'ping', hint:'ping', score:5 },
       { type:'single', question:'SSH服务的默认端口号是多少？', options:['21','22','80','443'], answer:1, score:5 },
       { type:'single', question:'SSH服务的主配置文件是？', options:['/etc/ssh/sshd.conf','/etc/ssh/sshd_config','/etc/ssh_config','/etc/sshd/sshd.conf'], answer:1, score:5 },
-      { type:'single', question:'以下哪个命令用于追踪数据包到达目标主机所经过的路由？', options:['ping','netstat','traceroute','tracepath'], answer:2, score:5 },
-      { type:'single', question:'firewalld中，用于查看当前所有区域的命令是？', options:['firewall-cmd --list-all','firewall-cmd --get-zones','firewall-cmd --get-active-zones','firewall-cmd --zone=public --list-all'], answer:1, score:5 },
+      { type:'fill', question:'追踪数据包到达目标主机所经过的路由，请输入命令名', answer:['traceroute','tracepath'], hint:'traceroute 或 tracepath', score:5 },
+      { type:'fill', question:'firewalld 中查看当前所有区域，请输入命令', answer:'firewall-cmd --get-zones', hint:'firewall-cmd --get-zones', score:5 },
       { type:'single', question:'SSH密钥认证中，公钥应存放在服务器的哪个文件中？', options:['~/.ssh/id_rsa','~/.ssh/id_rsa.pub','~/.ssh/authorized_keys','~/.ssh/known_hosts'], answer:2, score:5 },
-      { type:'single', question:'使用 nmcli 命令查看所有网络连接，应输入什么？', options:['nmcli show','nmcli connection show','nmcli list','nmcli dev show'], answer:1, score:5 },
+      { type:'fill', question:'使用 nmcli 查看所有网络连接，请输入命令', answer:['nmcli connection show','nmcli con show'], hint:'nmcli connection show', score:5 },
       { type:'single', question:'DNS查询命令 nslookup 的作用是什么？', options:['测试网速','查询域名对应的IP地址','查看路由表','检测端口'], answer:1, score:5 },
       // --- 命令选择题 ---
-      { type:'single', question:'要在防火墙中永久开放80端口（TCP），应使用什么命令？', options:['firewall-cmd --add-port=80/tcp --permanent','firewall-cmd --open-port=80/tcp','firewall-cmd --port=80 --add','firewall-cmd --zone=public --add-port=80/tcp'], answer:0, score:5 },
-      { type:'single', question:'使用SSH远程登录到服务器 192.168.1.100 的用户user，应输入什么命令？', options:['ssh user@192.168.1.100','ssh 192.168.1.100 user','ssh -l user 192.168.1.100','以上A和C都对'], answer:3, score:5 },
+      { type:'fill', question:'在防火墙中永久开放 80 端口（TCP），请输入命令', answer:['firewall-cmd --add-port=80/tcp --permanent','firewall-cmd --zone=public --add-port=80/tcp --permanent'], hint:'firewall-cmd --add-port=80/tcp --permanent', score:5 },
+      { type:'fill', question:'使用 SSH 远程登录到服务器 192.168.1.100 的 user 用户，请输入命令', answer:['ssh user@192.168.1.100','ssh -l user 192.168.1.100'], hint:'ssh <用户>@<IP>', score:5 },
       // --- 填空题（实际敲代码）---
       { type:'fill', question:'查看当前系统的所有网络接口信息，请输入命令', answer:['ifconfig','ip addr','ip a'], hint:'ifconfig 或 ip addr', score:5 },
       { type:'fill', question:'测试与 192.168.1.1 的网络连通性（发送4个包），请输入命令', answer:'ping -c 4 192.168.1.1', hint:'ping -c <次数> <IP>', score:5 },
@@ -1433,8 +1433,8 @@ const ZONES = [
       { type:'single', question:'ACL（访问控制列表）相比传统UGO权限有什么优势？', options:['只能设置读权限','可以为单个用户设置独立的权限','不支持目录','只能root使用'], answer:1, score:5 },
       { type:'multi', question:'以下哪些是Linux中的特殊权限位？（多选）', options:['SUID','SGID','Sticky Bit','SUDP'], answer:[0,1,2], score:5 },
       // --- 命令选择题 ---
-      { type:'single', question:'要递归修改目录 mydir 及其下所有文件的权限为 755，应使用什么命令？', options:['chmod 755 mydir','chmod -R 755 mydir','chmod --recursive 755 mydir','chmod 755 mydir/*'], answer:1, score:5 },
-      { type:'single', question:'要将文件 file.txt 的所有者改为 user1，所属组改为 group1，应使用什么命令？', options:['chown user1:group1 file.txt','chown user1 group1 file.txt','chown --owner=user1 --group=group1 file.txt','own user1:group1 file.txt'], answer:0, score:5 },
+      { type:'fill', question:'递归修改目录 mydir 及其下所有文件的权限为 755，请输入命令', answer:'chmod -R 755 mydir', hint:'chmod -R <权限> <目录>', score:5 },
+      { type:'fill', question:'将文件 file.txt 的所有者改为 user1，所属组改为 group1，请输入命令', answer:'chown user1:group1 file.txt', hint:'chown <用户>:<组> <文件>', score:5 },
       // --- 填空题（实际敲代码）---
       { type:'fill', question:'将文件 script.sh 的权限设置为所有者可读写执行，其他人只读和执行，请输入命令（数字法）', answer:'chmod 755 script.sh', hint:'chmod <数字> <文件>', score:5 },
       { type:'fill', question:'使用符号法给文件 readme.txt 的组用户添加写权限，请输入命令', answer:'chmod g+w readme.txt', hint:'chmod <对象><操作><权限> <文件>', score:5 },
@@ -1459,14 +1459,14 @@ const ZONES = [
       { type:'single', question:'YUM的仓库配置文件通常存放在哪个目录下？', options:['/etc/rpm/','/etc/yum.conf','/etc/yum.repos.d/','/var/yum/repos/'], answer:2, score:5 },
       { type:'single', question:'YUM仓库配置文件中，enabled=1 表示什么？', options:['启用该仓库','禁用该仓库','设置仓库优先级','设置超时时间'], answer:0, score:5 },
       { type:'single', question:'YUM仓库配置文件中，gpgcheck=1 表示什么？', options:['启用GPG签名验证','禁用GPG签名验证','启用网络检查','禁用防火墙'], answer:0, score:5 },
-      { type:'single', question:'以下哪个命令可以查询系统中已安装的所有RPM包？', options:['rpm -qa','rpm -ql','rpm -qi','rpm -qc'], answer:0, score:5 },
+      { type:'fill', question:'查询系统中已安装的所有 RPM 包，请输入命令', answer:'rpm -qa', hint:'rpm -qa', score:5 },
       { type:'single', question:'wget 命令的主要功能是什么？', options:['发送邮件','从网络上下载文件','压缩文件','编辑文本'], answer:1, score:5 },
       { type:'single', question:'curl 命令和 wget 命令的区别之一是？', options:['curl不支持HTTP','curl功能更丰富，可模拟浏览器请求','wget只能下载HTTPS','curl不能下载文件'], answer:1, score:5 },
       { type:'single', question:'rpm -qi 命令中的 i 选项代表什么含义？', options:['安装','查询包的详细信息','列出包中的文件','卸载'], answer:1, score:5 },
-      { type:'single', question:'以下哪个命令可以从YUM仓库中搜索软件包？', options:['yum search','yum find','yum lookfor','yum query'], answer:0, score:5 },
+      { type:'fill', question:'从 YUM 仓库中搜索软件包，请输入命令格式', answer:'yum search', hint:'yum search <关键词>', score:5 },
       // --- 命令选择题 ---
-      { type:'single', question:'要查看某个已安装RPM包中包含的文件列表，应使用什么命令？', options:['rpm -qi package','rpm -ql package','rpm -qc package','rpm -qd package'], answer:1, score:5 },
-      { type:'single', question:'要从YUM仓库安装 httpd 软件包，应使用什么命令？', options:['yum add httpd','yum install httpd','yum get httpd','yum setup httpd'], answer:1, score:5 },
+      { type:'fill', question:'查看已安装 RPM 包 package 中包含的文件列表，请输入命令', answer:'rpm -ql package', hint:'rpm -ql <包名>', score:5 },
+      { type:'fill', question:'从 YUM 仓库安装 httpd 软件包，请输入命令', answer:['yum install httpd','yum install httpd -y'], hint:'yum install <包名>', score:5 },
       // --- 填空题（实际敲代码）---
       { type:'fill', question:'查询系统中是否安装了 vim 软件包，请输入命令', answer:'rpm -q vim', hint:'rpm -q <包名>', score:5 },
       { type:'fill', question:'查看 vim 软件包的详细信息（版本、发行号等），请输入命令', answer:'rpm -qi vim', hint:'rpm -qi <包名>', score:5 },
@@ -1489,21 +1489,21 @@ const ZONES = [
     scenario: '你是某科技公司新入职的Linux运维工程师，今天公司新采购了一台CentOS 7服务器（IP: 192.168.10.100），主管要求你在下班前完成服务器的初始化部署，为开发团队搭建Web开发环境。你需要独立完成从系统信息确认、用户创建、网络配置、权限设置到软件安装的全部工作。加油！',
     questions: [
       // ===== 场景一：系统巡检（基础命令） =====
-      { type:'single', question:'【系统巡检】登录服务器后，你首先想确认操作系统的版本信息，应使用哪个命令？', options:['uname -r','cat /etc/centos-release','hostname','whoami'], answer:1, score:5 },
+      { type:'fill', question:'【系统巡检】登录服务器后，确认 CentOS 操作系统版本信息，请输入命令', answer:'cat /etc/centos-release', hint:'cat /etc/centos-release', score:5 },
       { type:'fill', question:'【系统巡检】查看当前服务器的内核版本，请输入命令', answer:'uname -r', hint:'uname -r', score:5 },
       { type:'fill', question:'【系统巡检】查看服务器磁盘使用情况，请输入命令', answer:'df -h', hint:'df -h', score:5 },
       { type:'fill', question:'【系统巡检】查看当前目录的磁盘占用大小（含子目录），请输入命令', answer:'du -sh', hint:'du -sh', score:5 },
 
       // ===== 场景二：团队用户搭建（用户管理） =====
-      { type:'single', question:'【用户搭建】公司有3个开发组：frontend、backend、devops。创建用户组应使用哪个命令？', options:['useradd -g','groupadd','addgroup','newgrp'], answer:1, score:5 },
+      { type:'fill', question:'【用户搭建】创建用户组通常使用哪个命令？请输入命令名', answer:'groupadd', hint:'groupadd', score:5 },
       { type:'fill', question:'【用户搭建】创建用户组 frontend，请输入命令', answer:'groupadd frontend', hint:'groupadd <组名>', score:5 },
       { type:'fill', question:'【用户搭建】创建开发者 zhangsan 并指定其主组为 frontend，请输入命令', answer:'useradd -g frontend zhangsan', hint:'useradd -g <组> <用户名>', score:5 },
       { type:'fill', question:'【用户搭建】为用户 zhangsan 设置初始密码，请输入命令', answer:'passwd zhangsan', hint:'passwd <用户名>', score:5 },
-      { type:'single', question:'【用户搭建】后来 zhangsan 需要同时参与 backend 组的项目，应使用哪个命令将其追加到 backend 组？', options:['usermod -g backend zhangsan','usermod -aG backend zhangsan','groupadd backend zhangsan','useradd -G backend zhangsan'], answer:1, score:5 },
+      { type:'fill', question:'【用户搭建】将 zhangsan 追加加入 backend 组，请输入命令', answer:'usermod -aG backend zhangsan', hint:'usermod -aG <组> <用户>', score:5 },
       { type:'single', question:'【用户搭建】主管要求查看 /etc/passwd 文件中 zhangsan 的信息，该文件中每行由冒号分隔，第3个字段表示什么？', options:['用户名','UID','GID','登录Shell'], answer:1, score:5 },
 
       // ===== 场景三：网络配置（网络） =====
-      { type:'single', question:'【网络配置】你需要确认服务器网卡 ens33 是否正确获取到 192.168.10.100 的IP地址，应使用哪个命令？', options:['ping 192.168.10.100','ip addr show ens33','route -n','ifdown ens33'], answer:1, score:5 },
+      { type:'fill', question:'【网络配置】确认服务器网卡 ens33 的 IP 地址，请输入命令', answer:['ip addr show ens33','ip a show ens33'], hint:'ip addr show <网卡名>', score:5 },
       { type:'fill', question:'【网络配置】使用 nmcli 查看 ens33 网卡的当前连接信息，请输入命令', answer:'nmcli device show ens33', hint:'nmcli device show <设备名>', score:5 },
       { type:'single', question:'【网络配置】公司要求开放 Web 服务的 80 端口和 443 端口，使用 firewall-cmd 开放端口后，还需要执行什么操作才能生效？', options:['重启服务器','重新加载防火墙规则','重启网络服务','不需要额外操作'], answer:1, score:5 },
       { type:'fill', question:'【网络配置】使用 firewall-cmd 永久开放 80 端口（TCP），请输入命令', answer:'firewall-cmd --zone=public --add-port=80/tcp --permanent', hint:'firewall-cmd --zone=public --add-port=<端口/协议> --permanent', score:5 },
@@ -1520,13 +1520,13 @@ const ZONES = [
       // ===== 场景五：软件部署（软件管理） =====
       { type:'single', question:'【软件部署】你需要安装 httpd（Apache）Web服务器，公司使用的是 CentOS 7，应使用哪个包管理器？', options:['apt','yum','dnf','pacman'], answer:1, score:5 },
       { type:'fill', question:'【软件部署】使用 YUM 安装 httpd 服务，请输入命令', answer:'yum install httpd -y', hint:'yum install <包名> -y', score:5 },
-      { type:'single', question:'【软件部署】安装完成后，你想确认 httpd 包是否安装成功以及安装的版本号，应使用哪个命令？', options:['yum list httpd','rpm -q httpd','which httpd','find httpd'], answer:1, score:5 },
+      { type:'fill', question:'【软件部署】确认 httpd 包是否安装成功以及版本号，请输入命令', answer:'rpm -q httpd', hint:'rpm -q <包名>', score:5 },
       { type:'fill', question:'【软件部署】查看 httpd 安装包的详细信息（版本、描述等），请输入命令', answer:'rpm -qi httpd', hint:'rpm -qi <包名>', score:5 },
-      { type:'single', question:'【软件部署】开发团队还需要部署 Git 进行版本控制，安装 Git 后你想查看 git 命令属于哪个软件包，应使用什么命令？', options:['rpm -q git','which git','rpm -qf $(which git)','yum info git'], answer:2, score:5 },
+      { type:'fill', question:'【软件部署】查看 git 命令属于哪个软件包，请输入命令', answer:['rpm -qf $(which git)','rpm -qf /usr/bin/git'], hint:'rpm -qf $(which git)', score:5 },
       { type:'fill', question:'【软件部署】使用 wget 从 https://repo.example.com/deploy.sh 下载部署脚本，请输入命令', answer:'wget https://repo.example.com/deploy.sh', hint:'wget <URL>', score:5 },
 
       // ===== 场景六：收尾验证 =====
-      { type:'single', question:'【收尾验证】所有配置完成后，主管让你确认 httpd 服务已启动并设为开机自启。应使用哪个命令？', options:['service httpd start','systemctl enable --now httpd','/etc/init.d/httpd start','httpd -k start'], answer:1, score:5 },
+      { type:'fill', question:'【收尾验证】启动 httpd 服务并设置为开机自启，请输入命令', answer:'systemctl enable --now httpd', hint:'systemctl enable --now <服务名>', score:5 },
       { type:'fill', question:'【收尾验证】查看 httpd 服务的运行状态，请输入命令', answer:'systemctl status httpd', hint:'systemctl status <服务名>', score:5 },
       { type:'single', question:'【收尾验证】最后，你想通过查看系统日志确认今天所有的用户操作记录，应查看哪个日志文件？', options:['/var/log/messages','/var/log/secure','/var/log/boot.log','/var/log/dmesg'], answer:1, score:5 },
     ]
