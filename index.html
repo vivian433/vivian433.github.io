@@ -1548,6 +1548,7 @@ const STATE = {
   selectedOptions: [],
   answered: false,
   shuffleSeed: [],  // 记录每关的题目随机顺序
+  zoneProgress: [null, null, null, null, null, null], // 记录每关未完成挑战的进度
   answerHistory: [] // 记录每道题的答题结果 [{zoneIdx, qIdx, type, correct, userAnswer, rightAnswer}]
 };
 
@@ -1603,6 +1604,7 @@ function startGame() {
   STATE.zoneScores = [0, 0, 0, 0, 0, 0];
   STATE.totalScore = 0;
   STATE.answerHistory = [];
+  STATE.zoneProgress = [null, null, null, null, null, null];
   // 为每关生成随机顺序
   STATE.shuffleSeed = ZONES.map(z => shuffleArray([...Array(z.questions.length).keys()]));
   document.getElementById('map-player-name').textContent = STATE.playerName;
@@ -1636,6 +1638,8 @@ function renderMap() {
     const status = STATE.zoneStatus[idx];
     const cls = status === 0 ? 'locked' : (status === 2 ? 'completed' : 'available');
     const bossCls = zone.isBoss ? ' boss-zone' : '';
+    const progress = STATE.zoneProgress[idx];
+    const progressText = progress && status !== 2 ? ` | 进度: ${progress.currentQ}/${zone.questions.length}` : '';
     html += `
       <div class="zone-card ${cls}${bossCls}" onclick="${status === 0 ? '' : 'enterZone('+idx+')'}">
         ${status === 0 ? '<div class="zone-lock-icon">&#x1f512;</div>' : ''}
@@ -1644,7 +1648,7 @@ function renderMap() {
         <div class="zone-badge">${status === 2 ? '&#x2714;' : zone.id}</div>
         <div class="zone-name">${zone.name}</div>
         <div class="zone-desc">${zone.desc}</div>
-        <div class="zone-qcount">${zone.questions.length} QUESTIONS${status === 2 ? ' | SCORE: ' + STATE.zoneScores[idx] : ''}</div>
+        <div class="zone-qcount">${zone.questions.length} QUESTIONS${status === 2 ? ' | SCORE: ' + STATE.zoneScores[idx] : progressText}</div>
         ${zone.isBoss && status === 0 ? '<div class="zone-boss-hint">&#x1f512; 通关前5关解锁</div>' : ''}
       </div>`;
   });
@@ -1658,17 +1662,22 @@ function renderMap() {
 // 进入关卡
 function enterZone(zoneIdx) {
   if (STATE.zoneStatus[zoneIdx] === 0) return;
-  clearZoneHistory(zoneIdx);
   STATE.currentZone = zoneIdx;
-  STATE.currentQ = 0;
-  STATE.currentScore = 0;
+  const savedProgress = STATE.zoneProgress[zoneIdx];
+  STATE.currentQ = savedProgress ? savedProgress.currentQ : 0;
+  STATE.currentScore = savedProgress ? savedProgress.currentScore : 0;
   STATE.answered = false;
   STATE.selectedOptions = [];
 
   const zone = ZONES[zoneIdx];
 
+  if (STATE.currentQ >= zone.questions.length) {
+    showZoneResult();
+    return;
+  }
+
   // Boss关卡：先显示场景描述
-  if (zone.isBoss && zone.scenario) {
+  if (zone.isBoss && zone.scenario && !savedProgress) {
     showScreen('screen-quiz');
     document.getElementById('quiz-zone-name').textContent = `ZONE ${zone.id}: ${zone.name}`;
     // 渲染场景介绍卡
@@ -1726,6 +1735,18 @@ function getZonePassScore(zone) {
 
 function clearZoneHistory(zoneIdx) {
   STATE.answerHistory = STATE.answerHistory.filter(r => r.zoneIdx !== zoneIdx);
+}
+
+function saveZoneProgress() {
+  if (STATE.currentZone === null) return;
+  STATE.zoneProgress[STATE.currentZone] = {
+    currentQ: Math.min(STATE.currentQ + 1, ZONES[STATE.currentZone].questions.length),
+    currentScore: STATE.currentScore
+  };
+}
+
+function resetZoneProgress(zoneIdx) {
+  STATE.zoneProgress[zoneIdx] = null;
 }
 
 function getAccuracyStats() {
@@ -1965,6 +1986,7 @@ function submitAnswer() {
       userAnswer: userAnswer,
       rightAnswer: getAnswerText(q.answer)
     });
+    saveZoneProgress();
   } else {
     if (q.type === 'single' && STATE.selectedOptions.length === 0) return;
     if (q.type === 'multi' && STATE.selectedOptions.length === 0) return;
@@ -2003,6 +2025,7 @@ function submitAnswer() {
       userAnswer: STATE.selectedOptions.map(i => letters[i]).join(''),
       rightAnswer: q.type === 'single' ? letters[q.answer] : [...q.answer].map(i => letters[i]).join('')
     });
+    saveZoneProgress();
   }
 
   document.getElementById('quiz-score-text').textContent = STATE.currentScore;
@@ -2034,6 +2057,7 @@ function showZoneResult() {
   if (passed) {
     STATE.zoneStatus[STATE.currentZone] = 2;
     STATE.zoneScores[STATE.currentZone] = STATE.currentScore;
+    resetZoneProgress(STATE.currentZone);
     STATE.totalScore = STATE.zoneScores.reduce((a, b) => a + b, 0);
     // 解锁下一关（前5关顺序解锁第2-5关；Boss关不解锁新关）
     if (STATE.currentZone < 4) {
@@ -2081,6 +2105,7 @@ function nextZone() {
 // 重试当前关卡
 function retryZone() {
   clearZoneHistory(STATE.currentZone);
+  resetZoneProgress(STATE.currentZone);
   enterZone(STATE.currentZone);
 }
 
@@ -2142,6 +2167,7 @@ function restartGame() {
   STATE.zoneScores = [0, 0, 0, 0, 0, 0];
   STATE.totalScore = 0;
   STATE.answerHistory = [];
+  STATE.zoneProgress = [null, null, null, null, null, null];
   STATE.shuffleSeed = ZONES.map(z => shuffleArray([...Array(z.questions.length).keys()]));
   showScreen('screen-title');
 }
